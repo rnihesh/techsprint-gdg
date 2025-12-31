@@ -1,0 +1,283 @@
+"use client";
+
+import { useCallback, useState, useEffect } from "react";
+import {
+  GoogleMap,
+  useJsApiLoader,
+  Marker,
+  InfoWindow,
+} from "@react-google-maps/api";
+import { Badge } from "@/components/ui/badge";
+import { Clock, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
+
+interface Issue {
+  id: string;
+  description: string;
+  type: string;
+  status: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  createdAt: string;
+  municipalityId: string;
+}
+
+interface GoogleMapComponentProps {
+  issues: Issue[];
+  center?: { lat: number; lng: number };
+  zoom?: number;
+  onBoundsChange?: (bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  }) => void;
+}
+
+const containerStyle = {
+  width: "100%",
+  height: "100%",
+};
+
+const defaultCenter = {
+  lat: 12.9716, // Bangalore
+  lng: 77.5946,
+};
+
+const mapOptions: google.maps.MapOptions = {
+  disableDefaultUI: false,
+  zoomControl: true,
+  streetViewControl: false,
+  mapTypeControl: false,
+  fullscreenControl: true,
+  styles: [
+    {
+      featureType: "poi",
+      elementType: "labels",
+      stylers: [{ visibility: "off" }],
+    },
+  ],
+};
+
+const getMarkerColor = (status: string): string => {
+  switch (status) {
+    case "OPEN":
+      return "#EAB308"; // yellow
+    case "RESPONDED":
+      return "#3B82F6"; // blue
+    case "VERIFIED":
+      return "#22C55E"; // green
+    case "NEEDS_MANUAL_REVIEW":
+      return "#F97316"; // orange
+    default:
+      return "#6B7280"; // gray
+  }
+};
+
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case "OPEN":
+      return <Clock className="h-4 w-4 text-yellow-500" />;
+    case "RESPONDED":
+      return <AlertTriangle className="h-4 w-4 text-blue-500" />;
+    case "VERIFIED":
+      return <CheckCircle className="h-4 w-4 text-green-500" />;
+    default:
+      return <Clock className="h-4 w-4 text-gray-500" />;
+  }
+};
+
+const getStatusBadge = (status: string) => {
+  const variants: Record<
+    string,
+    "default" | "secondary" | "destructive" | "outline"
+  > = {
+    OPEN: "secondary",
+    RESPONDED: "outline",
+    VERIFIED: "default",
+    NEEDS_MANUAL_REVIEW: "destructive",
+  };
+  const labels: Record<string, string> = {
+    OPEN: "Open",
+    RESPONDED: "Responded",
+    VERIFIED: "Verified",
+    NEEDS_MANUAL_REVIEW: "Under Review",
+  };
+  return (
+    <Badge variant={variants[status] || "secondary"}>
+      {labels[status] || status}
+    </Badge>
+  );
+};
+
+const getTypeBadge = (type: string) => {
+  const colors: Record<string, string> = {
+    POTHOLE: "bg-orange-100 text-orange-800",
+    GARBAGE: "bg-green-100 text-green-800",
+    DRAINAGE: "bg-blue-100 text-blue-800",
+    STREETLIGHT: "bg-yellow-100 text-yellow-800",
+    ROAD_DAMAGE: "bg-red-100 text-red-800",
+    WATER_SUPPLY: "bg-cyan-100 text-cyan-800",
+    OTHER: "bg-gray-100 text-gray-800",
+  };
+  return (
+    <span
+      className={`px-2 py-0.5 rounded text-xs font-medium ${
+        colors[type] || colors.OTHER
+      }`}
+    >
+      {type.replace(/_/g, " ")}
+    </span>
+  );
+};
+
+export function GoogleMapComponent({
+  issues,
+  center = defaultCenter,
+  zoom = 12,
+  onBoundsChange,
+}: GoogleMapComponentProps) {
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+  });
+
+  const onLoad = useCallback((map: google.maps.Map) => {
+    setMap(map);
+  }, []);
+
+  const onUnmount = useCallback(() => {
+    setMap(null);
+  }, []);
+
+  const handleBoundsChanged = useCallback(() => {
+    if (map && onBoundsChange) {
+      const bounds = map.getBounds();
+      if (bounds) {
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        onBoundsChange({
+          north: ne.lat(),
+          south: sw.lat(),
+          east: ne.lng(),
+          west: sw.lng(),
+        });
+      }
+    }
+  }, [map, onBoundsChange]);
+
+  // Try to get user's location
+  useEffect(() => {
+    if (map && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          map.panTo({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+        },
+        () => {
+          // User denied location, stay at default center
+          console.log("Geolocation permission denied, using default location");
+        }
+      );
+    }
+  }, [map]);
+
+  if (loadError) {
+    return (
+      <div className="flex items-center justify-center h-full bg-muted">
+        <div className="text-center p-8">
+          <AlertTriangle className="h-12 w-12 mx-auto text-destructive mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Failed to load map</h3>
+          <p className="text-muted-foreground">
+            Please check your API key configuration
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center h-full bg-muted">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <GoogleMap
+      mapContainerStyle={containerStyle}
+      center={center}
+      zoom={zoom}
+      onLoad={onLoad}
+      onUnmount={onUnmount}
+      onBoundsChanged={handleBoundsChanged}
+      options={mapOptions}
+    >
+      {issues.map((issue) => (
+        <Marker
+          key={issue.id}
+          position={{
+            lat: issue.location.latitude,
+            lng: issue.location.longitude,
+          }}
+          onClick={() => setSelectedIssue(issue)}
+          icon={{
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: getMarkerColor(issue.status),
+            fillOpacity: 1,
+            strokeColor: "#ffffff",
+            strokeWeight: 2,
+          }}
+        />
+      ))}
+
+      {selectedIssue && (
+        <InfoWindow
+          position={{
+            lat: selectedIssue.location.latitude,
+            lng: selectedIssue.location.longitude,
+          }}
+          onCloseClick={() => setSelectedIssue(null)}
+        >
+          <div className="p-2 max-w-xs">
+            <div className="flex items-center gap-2 mb-2">
+              {getStatusIcon(selectedIssue.status)}
+              {getStatusBadge(selectedIssue.status)}
+              {getTypeBadge(selectedIssue.type)}
+            </div>
+            <p className="text-sm font-medium mb-1">
+              {selectedIssue.description.slice(0, 100)}
+              {selectedIssue.description.length > 100 ? "..." : ""}
+            </p>
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <MapPin className="h-3 w-3" />
+              <span>
+                {selectedIssue.location.address ||
+                  `${selectedIssue.location.latitude.toFixed(
+                    4
+                  )}, ${selectedIssue.location.longitude.toFixed(4)}`}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+              Reported: {selectedIssue.createdAt}
+            </p>
+          </div>
+        </InfoWindow>
+      )}
+    </GoogleMap>
+  );
+}
+
+export default GoogleMapComponent;

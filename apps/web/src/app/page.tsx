@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -55,15 +55,16 @@ const issueTypes = [
   { value: "OTHER", label: "Other", icon: HelpCircle },
 ];
 
-const stats = [
-  { label: "Issues Reported", value: "12,450+", icon: AlertTriangle },
-  { label: "Issues Resolved", value: "8,230+", icon: CheckCircle },
-  { label: "Municipalities", value: "150+", icon: Building },
-  { label: "Avg Response Time", value: "48 hrs", icon: Clock },
-];
+interface Stats {
+  totalIssues: number;
+  resolvedIssues: number;
+  totalMunicipalities: number;
+  avgResponseTime: number;
+}
 
 export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [locationCoords, setLocationCoords] = useState<{
     lat: number;
     lng: number;
@@ -74,6 +75,21 @@ export default function HomePage() {
     location: "",
     images: [] as File[],
   });
+
+  // Fetch stats on mount
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const result = await issuesApi.getStats();
+        if (result.success && result.data) {
+          setStats(result.data);
+        }
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,22 +202,50 @@ export default function HomePage() {
         <section className="py-12 border-b bg-muted/30">
           <div className="container px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {stats.map((stat) => {
-                const Icon = stat.icon;
-                return (
-                  <div key={stat.label} className="text-center">
-                    <div className="flex justify-center mb-2">
-                      <Icon className="h-8 w-8 text-primary" />
-                    </div>
-                    <div className="text-2xl md:text-3xl font-bold">
-                      {stat.value}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {stat.label}
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="text-center">
+                <div className="flex justify-center mb-2">
+                  <AlertTriangle className="h-8 w-8 text-primary" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold">
+                  {stats?.totalIssues ?? 0}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Issues Reported
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="flex justify-center mb-2">
+                  <CheckCircle className="h-8 w-8 text-primary" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold">
+                  {stats?.resolvedIssues ?? 0}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Issues Resolved
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="flex justify-center mb-2">
+                  <Building className="h-8 w-8 text-primary" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold">
+                  {stats?.totalMunicipalities ?? 0}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Municipalities
+                </div>
+              </div>
+              <div className="text-center">
+                <div className="flex justify-center mb-2">
+                  <Clock className="h-8 w-8 text-primary" />
+                </div>
+                <div className="text-2xl md:text-3xl font-bold">
+                  {stats?.avgResponseTime ?? 0} hrs
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Avg Response Time
+                </div>
+              </div>
             </div>
           </div>
         </section>

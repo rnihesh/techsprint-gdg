@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,8 +31,24 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
-  XCircle,
 } from "lucide-react";
+
+// Dynamically import Google Maps to avoid SSR issues
+const GoogleMapComponent = dynamic(
+  () =>
+    import("@/components/map/GoogleMap").then((mod) => mod.GoogleMapComponent),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex items-center justify-center h-full bg-muted">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+    ),
+  }
+);
 
 interface Issue {
   id: string;
@@ -46,62 +63,6 @@ interface Issue {
   createdAt: string;
   municipalityId: string;
 }
-
-// Fallback mock data
-const mockIssues: Issue[] = [
-  {
-    id: "1",
-    description: "Large pothole on MG Road causing accidents",
-    type: "POTHOLE",
-    status: "OPEN",
-    location: {
-      latitude: 12.9716,
-      longitude: 77.5946,
-      address: "MG Road, Bangalore",
-    },
-    createdAt: "2024-01-15",
-    municipalityId: "MUN-001",
-  },
-  {
-    id: "2",
-    description: "Garbage not collected for 3 days",
-    type: "GARBAGE",
-    status: "RESPONDED",
-    location: {
-      latitude: 12.9352,
-      longitude: 77.6245,
-      address: "Koramangala, Bangalore",
-    },
-    createdAt: "2024-01-14",
-    municipalityId: "MUN-001",
-  },
-  {
-    id: "3",
-    description: "Streetlight not working",
-    type: "STREETLIGHT",
-    status: "VERIFIED",
-    location: {
-      latitude: 12.9698,
-      longitude: 77.75,
-      address: "Whitefield, Bangalore",
-    },
-    createdAt: "2024-01-10",
-    municipalityId: "MUN-001",
-  },
-  {
-    id: "4",
-    description: "Drainage overflow causing flooding",
-    type: "DRAINAGE",
-    status: "OPEN",
-    location: {
-      latitude: 12.985,
-      longitude: 77.605,
-      address: "Indiranagar, Bangalore",
-    },
-    createdAt: "2024-01-16",
-    municipalityId: "MUN-001",
-  },
-];
 
 const issueTypes = [
   { value: "all", label: "All Types" },
@@ -183,15 +144,18 @@ const getTypeBadge = (type: string) => {
 export default function MapPage() {
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     type: "all",
     status: "all",
   });
-  const [issues, setIssues] = useState<Issue[]>(mockIssues);
+  const [issues, setIssues] = useState<Issue[]>([]);
 
   useEffect(() => {
     const fetchIssues = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const statusFilters =
           filters.status !== "all" ? [filters.status] : undefined;
@@ -204,10 +168,14 @@ export default function MapPage() {
 
         if (result.success && result.data?.items) {
           setIssues(result.data.items as Issue[]);
+        } else {
+          setError(result.error || "Failed to fetch issues");
+          setIssues([]);
         }
-      } catch (error) {
-        console.error("Error fetching issues:", error);
-        // Keep using mock data
+      } catch (err) {
+        console.error("Error fetching issues:", err);
+        setError("Network error. Please try again.");
+        setIssues([]);
       } finally {
         setIsLoading(false);
       }
@@ -324,40 +292,34 @@ export default function MapPage() {
                   </div>
                 </div>
               ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50 to-green-50 dark:from-blue-950/20 dark:to-green-950/20 flex items-center justify-center">
-                  <Card className="max-w-md text-center">
-                    <CardHeader>
-                      <MapPin className="h-12 w-12 mx-auto text-primary mb-4" />
-                      <CardTitle>Interactive Map</CardTitle>
-                      <CardDescription>
-                        Map integration requires Mapbox or Google Maps API key.
-                        Configure your API keys in the environment variables to
-                        enable the interactive map view.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Found <strong>{filteredIssues.length}</strong> issues in
-                        view
-                      </p>
-                      <Button
-                        variant="outline"
-                        onClick={() => setViewMode("list")}
-                      >
-                        <List className="h-4 w-4 mr-2" />
-                        Switch to List View
-                      </Button>
-                    </CardContent>
-                  </Card>
-                </div>
+                <>
+                  <GoogleMapComponent issues={filteredIssues} />
+                  {/* Issue count overlay */}
+                  <div className="absolute top-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10">
+                    <p className="text-sm font-medium">
+                      {filteredIssues.length} issues found
+                    </p>
+                  </div>
+                  {/* Legend */}
+                  <div className="absolute bottom-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10">
+                    <p className="text-xs font-medium mb-2">Status Legend</p>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <span>Open</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                        <span>Responded</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                        <span>Verified</span>
+                      </div>
+                    </div>
+                  </div>
+                </>
               )}
-
-              {/* Issue count overlay */}
-              <div className="absolute top-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg">
-                <p className="text-sm font-medium">
-                  {filteredIssues.length} issues found
-                </p>
-              </div>
             </div>
           ) : (
             /* List View */

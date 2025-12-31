@@ -43,140 +43,6 @@ interface LeaderboardEntry {
   previousRank: number | null;
 }
 
-// Fallback mock data when API is not available
-const mockLeaderboard: LeaderboardEntry[] = [
-  {
-    rank: 1,
-    municipality: {
-      id: "1",
-      name: "Pune Municipal Corporation",
-      state: "Maharashtra",
-      district: "Pune",
-      score: 92,
-    },
-    score: 92,
-    trend: "UP" as const,
-    previousRank: 4,
-  },
-  {
-    rank: 2,
-    municipality: {
-      id: "2",
-      name: "Surat Municipal Corporation",
-      state: "Gujarat",
-      district: "Surat",
-      score: 89,
-    },
-    score: 89,
-    trend: "UP" as const,
-    previousRank: 7,
-  },
-  {
-    rank: 3,
-    municipality: {
-      id: "3",
-      name: "Indore Municipal Corporation",
-      state: "Madhya Pradesh",
-      district: "Indore",
-      score: 87,
-    },
-    score: 87,
-    trend: "STABLE" as const,
-    previousRank: 3,
-  },
-  {
-    rank: 4,
-    municipality: {
-      id: "4",
-      name: "Bruhat Bengaluru Mahanagara Palike",
-      state: "Karnataka",
-      district: "Bangalore",
-      score: 82,
-    },
-    score: 82,
-    trend: "DOWN" as const,
-    previousRank: 2,
-  },
-  {
-    rank: 5,
-    municipality: {
-      id: "5",
-      name: "Greater Hyderabad Municipal Corporation",
-      state: "Telangana",
-      district: "Hyderabad",
-      score: 79,
-    },
-    score: 79,
-    trend: "UP" as const,
-    previousRank: 6,
-  },
-  {
-    rank: 6,
-    municipality: {
-      id: "6",
-      name: "Municipal Corporation of Delhi",
-      state: "Delhi",
-      district: "Delhi",
-      score: 75,
-    },
-    score: 75,
-    trend: "DOWN" as const,
-    previousRank: 2,
-  },
-  {
-    rank: 7,
-    municipality: {
-      id: "7",
-      name: "Brihanmumbai Municipal Corporation",
-      state: "Maharashtra",
-      district: "Mumbai",
-      score: 72,
-    },
-    score: 72,
-    trend: "STABLE" as const,
-    previousRank: 7,
-  },
-  {
-    rank: 8,
-    municipality: {
-      id: "8",
-      name: "Chennai Corporation",
-      state: "Tamil Nadu",
-      district: "Chennai",
-      score: 68,
-    },
-    score: 68,
-    trend: "UP" as const,
-    previousRank: 10,
-  },
-  {
-    rank: 9,
-    municipality: {
-      id: "9",
-      name: "Kolkata Municipal Corporation",
-      state: "West Bengal",
-      district: "Kolkata",
-      score: 65,
-    },
-    score: 65,
-    trend: "DOWN" as const,
-    previousRank: 6,
-  },
-  {
-    rank: 10,
-    municipality: {
-      id: "10",
-      name: "Ahmedabad Municipal Corporation",
-      state: "Gujarat",
-      district: "Ahmedabad",
-      score: 62,
-    },
-    score: 62,
-    trend: "UP" as const,
-    previousRank: 11,
-  },
-];
-
 const getTrendIcon = (
   trend: "UP" | "DOWN" | "STABLE",
   previousRank: number | null,
@@ -246,26 +112,33 @@ const getProgressColor = (score: number) => {
 
 export default function LeaderboardPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("month");
-  const [leaderboard, setLeaderboard] =
-    useState<LeaderboardEntry[]>(mockLeaderboard);
-  const [totalMunicipalities, setTotalMunicipalities] = useState(156);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [totalMunicipalities, setTotalMunicipalities] = useState(0);
 
   useEffect(() => {
     const fetchLeaderboard = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const result = await municipalitiesApi.getLeaderboard();
         if (result.success && result.data) {
-          // Use API data if available, otherwise fall back to mock
-          if (result.data.entries && result.data.entries.length > 0) {
+          if (result.data.entries) {
             setLeaderboard(result.data.entries as LeaderboardEntry[]);
-            setTotalMunicipalities(result.data.totalMunicipalities || 156);
+            setTotalMunicipalities(result.data.totalMunicipalities || 0);
+          } else {
+            setLeaderboard([]);
           }
+        } else {
+          setError(result.error || "Failed to fetch leaderboard");
+          setLeaderboard([]);
         }
-      } catch (error) {
-        console.error("Error fetching leaderboard:", error);
-        // Keep using mock data
+      } catch (err) {
+        console.error("Error fetching leaderboard:", err);
+        setError("Network error. Please try again.");
+        setLeaderboard([]);
       } finally {
         setIsLoading(false);
       }
@@ -284,13 +157,15 @@ export default function LeaderboardPage() {
 
   const stats = {
     totalMunicipalities,
-    totalIssuesResolved: 45230,
+    totalIssuesResolved: 0,
     avgScore:
-      Math.round(
-        leaderboard.reduce((acc, item) => acc + item.score, 0) /
-          leaderboard.length
-      ) || 74,
-    avgResponseTime: 56,
+      leaderboard.length > 0
+        ? Math.round(
+            leaderboard.reduce((acc, item) => acc + item.score, 0) /
+              leaderboard.length
+          )
+        : 0,
+    avgResponseTime: 0,
   };
 
   return (

@@ -96,6 +96,15 @@ export const issuesApi = {
 
   getById: (id: string) => api<unknown>(`/issues/${id}`),
 
+  getStats: () =>
+    api<{
+      totalIssues: number;
+      resolvedIssues: number;
+      openIssues: number;
+      totalMunicipalities: number;
+      avgResponseTime: number;
+    }>("/issues/stats"),
+
   getByBounds: (bounds: {
     north: number;
     south: number;
