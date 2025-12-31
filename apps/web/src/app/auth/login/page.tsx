@@ -4,7 +4,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
@@ -78,7 +84,7 @@ export default function LoginPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MapPin className="h-5 w-5" />
             </div>
-            <span className="font-bold text-xl">Nagarik Seva</span>
+            <span className="font-bold text-xl">CivicLemma</span>
           </Link>
           <Button variant="ghost" asChild>
             <Link href="/">
@@ -153,7 +159,10 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   value={formData.password}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, password: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
                   }
                   required
                   autoComplete="current-password"
@@ -180,7 +189,10 @@ export default function LoginPage() {
               <span className="text-muted-foreground">
                 Don&apos;t have an account?{" "}
               </span>
-              <Link href="/auth/register" className="text-primary hover:underline font-medium">
+              <Link
+                href="/auth/register"
+                className="text-primary hover:underline font-medium"
+              >
                 Create an account
               </Link>
             </div>
@@ -202,7 +214,9 @@ export default function LoginPage() {
 
       {/* Footer */}
       <footer className="border-t py-4 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Nagarik Seva. All rights reserved.</p>
+        <p>
+          &copy; {new Date().getFullYear()} CivicLemma. All rights reserved.
+        </p>
       </footer>
     </div>
   );

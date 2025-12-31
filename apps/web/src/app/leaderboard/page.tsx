@@ -2,12 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { Header, Footer } from "@/components/layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { municipalitiesApi } from "@/lib/api";
 import {
   Trophy,
   Medal,
@@ -22,133 +29,172 @@ import {
   Star,
 } from "lucide-react";
 
-// Mock leaderboard data
-const mockLeaderboard = [
+interface LeaderboardEntry {
+  rank: number;
+  municipality: {
+    id: string;
+    name: string;
+    state: string;
+    district: string;
+    score: number;
+  };
+  score: number;
+  trend: "UP" | "DOWN" | "STABLE";
+  previousRank: number | null;
+}
+
+// Fallback mock data when API is not available
+const mockLeaderboard: LeaderboardEntry[] = [
   {
     rank: 1,
-    name: "Pune Municipal Corporation",
-    state: "Maharashtra",
+    municipality: {
+      id: "1",
+      name: "Pune Municipal Corporation",
+      state: "Maharashtra",
+      district: "Pune",
+      score: 92,
+    },
     score: 92,
-    totalIssues: 1250,
-    resolvedIssues: 1150,
-    avgResponseTime: 24,
-    trend: "up",
-    change: 3,
+    trend: "UP" as const,
+    previousRank: 4,
   },
   {
     rank: 2,
-    name: "Surat Municipal Corporation",
-    state: "Gujarat",
+    municipality: {
+      id: "2",
+      name: "Surat Municipal Corporation",
+      state: "Gujarat",
+      district: "Surat",
+      score: 89,
+    },
     score: 89,
-    totalIssues: 890,
-    resolvedIssues: 790,
-    avgResponseTime: 32,
-    trend: "up",
-    change: 5,
+    trend: "UP" as const,
+    previousRank: 7,
   },
   {
     rank: 3,
-    name: "Indore Municipal Corporation",
-    state: "Madhya Pradesh",
+    municipality: {
+      id: "3",
+      name: "Indore Municipal Corporation",
+      state: "Madhya Pradesh",
+      district: "Indore",
+      score: 87,
+    },
     score: 87,
-    totalIssues: 670,
-    resolvedIssues: 580,
-    avgResponseTime: 28,
-    trend: "same",
-    change: 0,
+    trend: "STABLE" as const,
+    previousRank: 3,
   },
   {
     rank: 4,
-    name: "Bruhat Bengaluru Mahanagara Palike",
-    state: "Karnataka",
+    municipality: {
+      id: "4",
+      name: "Bruhat Bengaluru Mahanagara Palike",
+      state: "Karnataka",
+      district: "Bangalore",
+      score: 82,
+    },
     score: 82,
-    totalIssues: 2100,
-    resolvedIssues: 1720,
-    avgResponseTime: 48,
-    trend: "down",
-    change: 2,
+    trend: "DOWN" as const,
+    previousRank: 2,
   },
   {
     rank: 5,
-    name: "Greater Hyderabad Municipal Corporation",
-    state: "Telangana",
+    municipality: {
+      id: "5",
+      name: "Greater Hyderabad Municipal Corporation",
+      state: "Telangana",
+      district: "Hyderabad",
+      score: 79,
+    },
     score: 79,
-    totalIssues: 1800,
-    resolvedIssues: 1420,
-    avgResponseTime: 52,
-    trend: "up",
-    change: 1,
+    trend: "UP" as const,
+    previousRank: 6,
   },
   {
     rank: 6,
-    name: "Municipal Corporation of Delhi",
-    state: "Delhi",
+    municipality: {
+      id: "6",
+      name: "Municipal Corporation of Delhi",
+      state: "Delhi",
+      district: "Delhi",
+      score: 75,
+    },
     score: 75,
-    totalIssues: 3200,
-    resolvedIssues: 2400,
-    avgResponseTime: 72,
-    trend: "down",
-    change: 4,
+    trend: "DOWN" as const,
+    previousRank: 2,
   },
   {
     rank: 7,
-    name: "Brihanmumbai Municipal Corporation",
-    state: "Maharashtra",
+    municipality: {
+      id: "7",
+      name: "Brihanmumbai Municipal Corporation",
+      state: "Maharashtra",
+      district: "Mumbai",
+      score: 72,
+    },
     score: 72,
-    totalIssues: 4500,
-    resolvedIssues: 3240,
-    avgResponseTime: 68,
-    trend: "same",
-    change: 0,
+    trend: "STABLE" as const,
+    previousRank: 7,
   },
   {
     rank: 8,
-    name: "Chennai Corporation",
-    state: "Tamil Nadu",
+    municipality: {
+      id: "8",
+      name: "Chennai Corporation",
+      state: "Tamil Nadu",
+      district: "Chennai",
+      score: 68,
+    },
     score: 68,
-    totalIssues: 1950,
-    resolvedIssues: 1320,
-    avgResponseTime: 84,
-    trend: "up",
-    change: 2,
+    trend: "UP" as const,
+    previousRank: 10,
   },
   {
     rank: 9,
-    name: "Kolkata Municipal Corporation",
-    state: "West Bengal",
+    municipality: {
+      id: "9",
+      name: "Kolkata Municipal Corporation",
+      state: "West Bengal",
+      district: "Kolkata",
+      score: 65,
+    },
     score: 65,
-    totalIssues: 1700,
-    resolvedIssues: 1100,
-    avgResponseTime: 96,
-    trend: "down",
-    change: 3,
+    trend: "DOWN" as const,
+    previousRank: 6,
   },
   {
     rank: 10,
-    name: "Ahmedabad Municipal Corporation",
-    state: "Gujarat",
+    municipality: {
+      id: "10",
+      name: "Ahmedabad Municipal Corporation",
+      state: "Gujarat",
+      district: "Ahmedabad",
+      score: 62,
+    },
     score: 62,
-    totalIssues: 1100,
-    resolvedIssues: 680,
-    avgResponseTime: 108,
-    trend: "up",
-    change: 1,
+    trend: "UP" as const,
+    previousRank: 11,
   },
 ];
 
-const getTrendIcon = (trend: string, change: number) => {
-  if (trend === "up") {
+const getTrendIcon = (
+  trend: "UP" | "DOWN" | "STABLE",
+  previousRank: number | null,
+  currentRank: number
+) => {
+  const change = previousRank ? Math.abs(previousRank - currentRank) : 0;
+  if (trend === "UP") {
     return (
       <div className="flex items-center gap-1 text-green-600">
         <TrendingUp className="h-4 w-4" />
-        <span className="text-xs">+{change}</span>
+        {change > 0 && <span className="text-xs">+{change}</span>}
       </div>
     );
-  } else if (trend === "down") {
+  } else if (trend === "DOWN") {
     return (
       <div className="flex items-center gap-1 text-red-600">
         <TrendingDown className="h-4 w-4" />
-        <span className="text-xs">-{change}</span>
+        {change > 0 && <span className="text-xs">-{change}</span>}
       </div>
     );
   }
@@ -202,22 +248,48 @@ export default function LeaderboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [timeRange, setTimeRange] = useState("month");
+  const [leaderboard, setLeaderboard] =
+    useState<LeaderboardEntry[]>(mockLeaderboard);
+  const [totalMunicipalities, setTotalMunicipalities] = useState(156);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
+    const fetchLeaderboard = async () => {
+      try {
+        const result = await municipalitiesApi.getLeaderboard();
+        if (result.success && result.data) {
+          // Use API data if available, otherwise fall back to mock
+          if (result.data.entries && result.data.entries.length > 0) {
+            setLeaderboard(result.data.entries as LeaderboardEntry[]);
+            setTotalMunicipalities(result.data.totalMunicipalities || 156);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+        // Keep using mock data
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
   }, []);
 
-  const filteredLeaderboard = mockLeaderboard.filter(
+  const filteredLeaderboard = leaderboard.filter(
     (item) =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.state.toLowerCase().includes(searchQuery.toLowerCase())
+      item.municipality.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      item.municipality.state.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const stats = {
-    totalMunicipalities: 156,
+    totalMunicipalities,
     totalIssuesResolved: 45230,
-    avgScore: 74,
+    avgScore:
+      Math.round(
+        leaderboard.reduce((acc, item) => acc + item.score, 0) /
+          leaderboard.length
+      ) || 74,
     avgResponseTime: 56,
   };
 
@@ -238,8 +310,9 @@ export default function LeaderboardPage() {
                 Municipality Leaderboard
               </h1>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Transparent rankings based on issue resolution rate, response time, and
-                citizen satisfaction. Hold your local government accountable.
+                Transparent rankings based on issue resolution rate, response
+                time, and citizen satisfaction. Hold your local government
+                accountable.
               </p>
             </div>
 
@@ -248,15 +321,23 @@ export default function LeaderboardPage() {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <MapPin className="h-6 w-6 mx-auto text-primary mb-2" />
-                  <div className="text-2xl font-bold">{stats.totalMunicipalities}</div>
-                  <p className="text-sm text-muted-foreground">Municipalities</p>
+                  <div className="text-2xl font-bold">
+                    {stats.totalMunicipalities}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Municipalities
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6 text-center">
                   <CheckCircle className="h-6 w-6 mx-auto text-green-500 mb-2" />
-                  <div className="text-2xl font-bold">{stats.totalIssuesResolved.toLocaleString()}</div>
-                  <p className="text-sm text-muted-foreground">Issues Resolved</p>
+                  <div className="text-2xl font-bold">
+                    {stats.totalIssuesResolved.toLocaleString()}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Issues Resolved
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -269,7 +350,9 @@ export default function LeaderboardPage() {
               <Card>
                 <CardContent className="pt-6 text-center">
                   <Clock className="h-6 w-6 mx-auto text-blue-500 mb-2" />
-                  <div className="text-2xl font-bold">{stats.avgResponseTime}h</div>
+                  <div className="text-2xl font-bold">
+                    {stats.avgResponseTime}h
+                  </div>
                   <p className="text-sm text-muted-foreground">Avg Response</p>
                 </CardContent>
               </Card>
@@ -316,7 +399,10 @@ export default function LeaderboardPage() {
                     {Array(5)
                       .fill(0)
                       .map((_, i) => (
-                        <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+                        <div
+                          key={i}
+                          className="flex items-center gap-4 p-4 border rounded-lg"
+                        >
                           <Skeleton className="h-10 w-10 rounded-full" />
                           <div className="flex-1 space-y-2">
                             <Skeleton className="h-4 w-1/3" />
@@ -329,48 +415,52 @@ export default function LeaderboardPage() {
                 ) : filteredLeaderboard.length === 0 ? (
                   <div className="text-center py-12">
                     <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No results found</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      No results found
+                    </h3>
                     <p className="text-muted-foreground">
                       Try adjusting your search query
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {filteredLeaderboard.map((municipality) => (
+                    {filteredLeaderboard.map((entry) => (
                       <div
-                        key={municipality.rank}
+                        key={entry.rank}
                         className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                       >
                         {/* Rank Badge */}
-                        {getRankBadge(municipality.rank)}
+                        {getRankBadge(entry.rank)}
 
                         {/* Municipality Info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold truncate">{municipality.name}</h3>
-                            {getTrendIcon(municipality.trend, municipality.change)}
+                            <h3 className="font-semibold truncate">
+                              {entry.municipality.name}
+                            </h3>
+                            {getTrendIcon(
+                              entry.trend,
+                              entry.previousRank,
+                              entry.rank
+                            )}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <MapPin className="h-3 w-3" />
-                            <span>{municipality.state}</span>
-                            <span>•</span>
-                            <span>{municipality.resolvedIssues}/{municipality.totalIssues} resolved</span>
-                            <span>•</span>
-                            <Clock className="h-3 w-3" />
-                            <span>{municipality.avgResponseTime}h avg</span>
+                            <span>{entry.municipality.state}</span>
                           </div>
                         </div>
 
                         {/* Score */}
                         <div className="text-right shrink-0">
-                          <div className={`text-2xl font-bold ${getScoreColor(municipality.score)}`}>
-                            {municipality.score}
+                          <div
+                            className={`text-2xl font-bold ${getScoreColor(
+                              entry.score
+                            )}`}
+                          >
+                            {entry.score}
                           </div>
                           <div className="w-24 mt-1">
-                            <Progress 
-                              value={municipality.score} 
-                              className="h-2"
-                            />
+                            <Progress value={entry.score} className="h-2" />
                           </div>
                         </div>
                       </div>
@@ -393,7 +483,8 @@ export default function LeaderboardPage() {
                       <h4 className="font-semibold">Resolution Rate (40%)</h4>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Percentage of reported issues that have been resolved successfully.
+                      Percentage of reported issues that have been resolved
+                      successfully.
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -402,7 +493,8 @@ export default function LeaderboardPage() {
                       <h4 className="font-semibold">Response Time (35%)</h4>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Average time taken to acknowledge and respond to reported issues.
+                      Average time taken to acknowledge and respond to reported
+                      issues.
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -411,7 +503,8 @@ export default function LeaderboardPage() {
                       <h4 className="font-semibold">Quality Score (25%)</h4>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Based on verification of resolution photos and citizen feedback.
+                      Based on verification of resolution photos and citizen
+                      feedback.
                     </p>
                   </div>
                 </div>

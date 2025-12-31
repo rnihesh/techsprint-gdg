@@ -15,9 +15,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nagarik Seva - Civic Issue Reporting Platform",
-  description: "Report civic issues anonymously and hold your municipality accountable. A transparent platform for citizens to report potholes, garbage, drainage problems and more.",
-  keywords: ["civic", "municipality", "governance", "india", "transparency", "potholes", "garbage", "drainage"],
+  title: "CivicLemma - Civic Issue Reporting Platform",
+  description:
+    "Report civic issues anonymously and hold your municipality accountable. A transparent platform for citizens to report potholes, garbage, drainage problems and more.",
+  keywords: [
+    "civic",
+    "municipality",
+    "governance",
+    "india",
+    "transparency",
+    "potholes",
+    "garbage",
+    "drainage",
+  ],
 };
 
 export default function RootLayout({

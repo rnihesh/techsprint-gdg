@@ -45,7 +45,7 @@ export function Header() {
             <MapPin className="h-5 w-5" />
           </div>
           <span className="font-bold text-xl hidden sm:inline-block">
-            Nagarik Seva
+            CivicLemma
           </span>
         </Link>
 

@@ -12,10 +12,11 @@ export function Footer() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <MapPin className="h-5 w-5" />
               </div>
-              <span className="font-bold text-xl">Nagarik Seva</span>
+              <span className="font-bold text-xl">CivicLemma</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Empowering citizens to report civic issues and hold municipalities accountable.
+              Empowering citizens to report civic issues and hold municipalities
+              accountable.
             </p>
           </div>
 
@@ -24,16 +25,24 @@ export function Footer() {
             <h3 className="font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/" className="hover:text-primary">Report Issue</Link>
+                <Link href="/" className="hover:text-primary">
+                  Report Issue
+                </Link>
               </li>
               <li>
-                <Link href="/map" className="hover:text-primary">Map View</Link>
+                <Link href="/map" className="hover:text-primary">
+                  Map View
+                </Link>
               </li>
               <li>
-                <Link href="/leaderboard" className="hover:text-primary">Leaderboard</Link>
+                <Link href="/leaderboard" className="hover:text-primary">
+                  Leaderboard
+                </Link>
               </li>
               <li>
-                <Link href="/municipalities" className="hover:text-primary">Municipalities</Link>
+                <Link href="/municipalities" className="hover:text-primary">
+                  Municipalities
+                </Link>
               </li>
             </ul>
           </div>
@@ -43,13 +52,22 @@ export function Footer() {
             <h3 className="font-semibold mb-4">For Municipalities</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/auth/login" className="hover:text-primary">Login</Link>
+                <Link href="/auth/login" className="hover:text-primary">
+                  Login
+                </Link>
               </li>
               <li>
-                <Link href="/auth/register" className="hover:text-primary">Register</Link>
+                <Link href="/auth/register" className="hover:text-primary">
+                  Register
+                </Link>
               </li>
               <li>
-                <Link href="/municipality/dashboard" className="hover:text-primary">Dashboard</Link>
+                <Link
+                  href="/municipality/dashboard"
+                  className="hover:text-primary"
+                >
+                  Dashboard
+                </Link>
               </li>
             </ul>
           </div>
@@ -59,23 +77,34 @@ export function Footer() {
             <h3 className="font-semibold mb-4">About</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/about" className="hover:text-primary">About Us</Link>
+                <Link href="/about" className="hover:text-primary">
+                  About Us
+                </Link>
               </li>
               <li>
-                <Link href="/privacy" className="hover:text-primary">Privacy Policy</Link>
+                <Link href="/privacy" className="hover:text-primary">
+                  Privacy Policy
+                </Link>
               </li>
               <li>
-                <Link href="/terms" className="hover:text-primary">Terms of Service</Link>
+                <Link href="/terms" className="hover:text-primary">
+                  Terms of Service
+                </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-primary">Contact</Link>
+                <Link href="/contact" className="hover:text-primary">
+                  Contact
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Nagarik Seva. Built for GDG TechSprint.</p>
+          <p>
+            &copy; {new Date().getFullYear()} CivicLemma. Built for GDG
+            TechSprint.
+          </p>
         </div>
       </div>
     </footer>

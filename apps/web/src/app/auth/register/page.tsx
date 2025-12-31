@@ -4,10 +4,22 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -105,7 +117,7 @@ function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // For citizen registration (single step)
     if (!isMunicipalityRegistration) {
       if (formData.password !== formData.confirmPassword) {
@@ -173,7 +185,8 @@ function RegisterForm() {
       // TODO: Submit municipality registration to Firestore
       await new Promise((resolve) => setTimeout(resolve, 2000));
       toast.success("Registration submitted!", {
-        description: "Your application will be reviewed within 3-5 business days.",
+        description:
+          "Your application will be reviewed within 3-5 business days.",
       });
       router.push("/municipality/dashboard");
     } catch {
@@ -202,7 +215,7 @@ function RegisterForm() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MapPin className="h-5 w-5" />
             </div>
-            <span className="font-bold text-xl">Nagarik Seva</span>
+            <span className="font-bold text-xl">CivicLemma</span>
           </Link>
           <Button variant="ghost" asChild>
             <Link href="/">
@@ -233,7 +246,7 @@ function RegisterForm() {
                 : "Join Nagarik Seva to report civic issues"
               }
             </CardDescription>
-            
+
             {/* Progress - only for municipality registration */}
             {isMunicipalityRegistration && (
               <div className="flex gap-2 mt-4">
@@ -298,7 +311,10 @@ function RegisterForm() {
                       placeholder={isMunicipalityRegistration ? "contact@municipality.gov.in" : "you@example.com"}
                       value={formData.email}
                       onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, email: e.target.value }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
                       }
                       required
                       autoComplete="email"
@@ -319,7 +335,10 @@ function RegisterForm() {
                         placeholder="Create a strong password"
                         value={formData.password}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, password: e.target.value }))
+                          setFormData((prev) => ({
+                          ...prev,
+                          password: e.target.value,
+                        }))
                         }
                         required
                         minLength={6}
@@ -354,7 +373,10 @@ function RegisterForm() {
                         placeholder="Confirm your password"
                         value={formData.confirmPassword}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                          setFormData((prev) => ({
+                          ...prev,
+                          confirmPassword: e.target.value,
+                        }))
                         }
                         required
                         autoComplete="new-password"
@@ -381,13 +403,18 @@ function RegisterForm() {
               {step === 2 && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="municipalityName">Municipality Name *</Label>
+                    <Label htmlFor="municipalityName">
+                      Municipality Name *
+                    </Label>
                     <Input
                       id="municipalityName"
                       placeholder="e.g., Municipal Corporation of Delhi"
                       value={formData.municipalityName}
                       onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, municipalityName: e.target.value }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          municipalityName: e.target.value,
+                        }))
                       }
                       required
                     />
@@ -422,7 +449,10 @@ function RegisterForm() {
                         placeholder="Enter district"
                         value={formData.district}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, district: e.target.value }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            district: e.target.value,
+                          }))
                         }
                         required
                       />
@@ -438,7 +468,10 @@ function RegisterForm() {
                         placeholder="e.g., 500000"
                         value={formData.population}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, population: e.target.value }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            population: e.target.value,
+                          }))
                         }
                       />
                     </div>
@@ -451,7 +484,10 @@ function RegisterForm() {
                         placeholder="+91 XXXXX XXXXX"
                         value={formData.contactPhone}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, contactPhone: e.target.value }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            contactPhone: e.target.value,
+                          }))
                         }
                         required
                       />
@@ -465,7 +501,10 @@ function RegisterForm() {
                       placeholder="Full address of the municipality office"
                       value={formData.address}
                       onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, address: e.target.value }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          address: e.target.value,
+                        }))
                       }
                       rows={3}
                       required
@@ -477,13 +516,18 @@ function RegisterForm() {
               {step === 3 && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="registrationNumber">Registration Number *</Label>
+                    <Label htmlFor="registrationNumber">
+                      Registration Number *
+                    </Label>
                     <Input
                       id="registrationNumber"
                       placeholder="Government registration/license number"
                       value={formData.registrationNumber}
                       onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, registrationNumber: e.target.value }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          registrationNumber: e.target.value,
+                        }))
                       }
                       required
                     />
@@ -510,7 +554,9 @@ function RegisterForm() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => document.getElementById("documents")?.click()}
+                        onClick={() =>
+                          document.getElementById("documents")?.click()
+                        }
                       >
                         Choose File
                       </Button>
@@ -530,8 +576,9 @@ function RegisterForm() {
                       Verification Process
                     </h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                      Your registration will be reviewed by our team within 3-5 business days. 
-                      You will receive an email once your account is verified.
+                      Your registration will be reviewed by our team within 3-5
+                      business days. You will receive an email once your account
+                      is verified.
                     </p>
                   </div>
                 </>
@@ -619,7 +666,9 @@ function RegisterForm() {
 
       {/* Footer */}
       <footer className="border-t py-4 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Nagarik Seva. All rights reserved.</p>
+        <p>
+          &copy; {new Date().getFullYear()} CivicLemma. All rights reserved.
+        </p>
       </footer>
     </div>
   );

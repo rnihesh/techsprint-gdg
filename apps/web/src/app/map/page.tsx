@@ -3,11 +3,24 @@
 import { useState, useEffect } from "react";
 import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { issuesApi } from "@/lib/api";
 import {
   MapPin,
   Filter,
@@ -20,110 +33,149 @@ import {
   XCircle,
 } from "lucide-react";
 
-// Mock data for issues
-const mockIssues = [
+interface Issue {
+  id: string;
+  description: string;
+  type: string;
+  status: string;
+  location: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
+  createdAt: string;
+  municipalityId: string;
+}
+
+// Fallback mock data
+const mockIssues: Issue[] = [
   {
     id: "1",
-    title: "Large pothole on MG Road",
-    type: "pothole",
-    severity: "high",
-    status: "pending",
-    location: { lat: 12.9716, lng: 77.5946, address: "MG Road, Bangalore" },
+    description: "Large pothole on MG Road causing accidents",
+    type: "POTHOLE",
+    status: "OPEN",
+    location: {
+      latitude: 12.9716,
+      longitude: 77.5946,
+      address: "MG Road, Bangalore",
+    },
     createdAt: "2024-01-15",
-    municipality: "BBMP",
+    municipalityId: "MUN-001",
   },
   {
     id: "2",
-    title: "Garbage not collected for 3 days",
-    type: "garbage",
-    severity: "medium",
-    status: "in_progress",
-    location: { lat: 12.9352, lng: 77.6245, address: "Koramangala, Bangalore" },
+    description: "Garbage not collected for 3 days",
+    type: "GARBAGE",
+    status: "RESPONDED",
+    location: {
+      latitude: 12.9352,
+      longitude: 77.6245,
+      address: "Koramangala, Bangalore",
+    },
     createdAt: "2024-01-14",
-    municipality: "BBMP",
+    municipalityId: "MUN-001",
   },
   {
     id: "3",
-    title: "Streetlight not working",
-    type: "streetlight",
-    severity: "low",
-    status: "resolved",
-    location: { lat: 12.9698, lng: 77.7500, address: "Whitefield, Bangalore" },
+    description: "Streetlight not working",
+    type: "STREETLIGHT",
+    status: "VERIFIED",
+    location: {
+      latitude: 12.9698,
+      longitude: 77.75,
+      address: "Whitefield, Bangalore",
+    },
     createdAt: "2024-01-10",
-    municipality: "BBMP",
+    municipalityId: "MUN-001",
   },
   {
     id: "4",
-    title: "Drainage overflow causing flooding",
-    type: "drainage",
-    severity: "critical",
-    status: "pending",
-    location: { lat: 12.9850, lng: 77.6050, address: "Indiranagar, Bangalore" },
+    description: "Drainage overflow causing flooding",
+    type: "DRAINAGE",
+    status: "OPEN",
+    location: {
+      latitude: 12.985,
+      longitude: 77.605,
+      address: "Indiranagar, Bangalore",
+    },
     createdAt: "2024-01-16",
-    municipality: "BBMP",
+    municipalityId: "MUN-001",
   },
 ];
 
 const issueTypes = [
   { value: "all", label: "All Types" },
-  { value: "pothole", label: "Pothole" },
-  { value: "garbage", label: "Garbage" },
-  { value: "drainage", label: "Drainage" },
-  { value: "streetlight", label: "Streetlight" },
-  { value: "road_damage", label: "Road Damage" },
-  { value: "water_supply", label: "Water Supply" },
+  { value: "POTHOLE", label: "Pothole" },
+  { value: "GARBAGE", label: "Garbage" },
+  { value: "DRAINAGE", label: "Drainage" },
+  { value: "STREETLIGHT", label: "Streetlight" },
+  { value: "ROAD_DAMAGE", label: "Road Damage" },
+  { value: "WATER_SUPPLY", label: "Water Supply" },
 ];
 
 const statusOptions = [
   { value: "all", label: "All Status" },
-  { value: "pending", label: "Pending" },
-  { value: "acknowledged", label: "Acknowledged" },
-  { value: "in_progress", label: "In Progress" },
-  { value: "resolved", label: "Resolved" },
-  { value: "rejected", label: "Rejected" },
+  { value: "OPEN", label: "Open" },
+  { value: "RESPONDED", label: "Responded" },
+  { value: "VERIFIED", label: "Verified" },
+  { value: "NEEDS_MANUAL_REVIEW", label: "Under Review" },
 ];
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case "pending":
+    case "OPEN":
       return <Clock className="h-4 w-4 text-yellow-500" />;
-    case "acknowledged":
-    case "in_progress":
+    case "RESPONDED":
       return <AlertTriangle className="h-4 w-4 text-blue-500" />;
-    case "resolved":
+    case "VERIFIED":
       return <CheckCircle className="h-4 w-4 text-green-500" />;
-    case "rejected":
-      return <XCircle className="h-4 w-4 text-red-500" />;
+    case "NEEDS_MANUAL_REVIEW":
+      return <AlertTriangle className="h-4 w-4 text-orange-500" />;
     default:
       return <Clock className="h-4 w-4 text-gray-500" />;
   }
 };
 
 const getStatusBadge = (status: string) => {
-  const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-    pending: "secondary",
-    acknowledged: "outline",
-    in_progress: "default",
-    resolved: "default",
-    rejected: "destructive",
+  const variants: Record<
+    string,
+    "default" | "secondary" | "destructive" | "outline"
+  > = {
+    OPEN: "secondary",
+    RESPONDED: "outline",
+    VERIFIED: "default",
+    NEEDS_MANUAL_REVIEW: "destructive",
+  };
+  const labels: Record<string, string> = {
+    OPEN: "Open",
+    RESPONDED: "Responded",
+    VERIFIED: "Verified",
+    NEEDS_MANUAL_REVIEW: "Under Review",
   };
   return (
-    <Badge variant={variants[status] || "secondary"} className="capitalize">
-      {status.replace("_", " ")}
+    <Badge variant={variants[status] || "secondary"}>
+      {labels[status] || status}
     </Badge>
   );
 };
 
-const getSeverityBadge = (severity: string) => {
+const getTypeBadge = (type: string) => {
   const colors: Record<string, string> = {
-    low: "bg-gray-100 text-gray-800",
-    medium: "bg-yellow-100 text-yellow-800",
-    high: "bg-orange-100 text-orange-800",
-    critical: "bg-red-100 text-red-800",
+    POTHOLE: "bg-orange-100 text-orange-800",
+    GARBAGE: "bg-green-100 text-green-800",
+    DRAINAGE: "bg-blue-100 text-blue-800",
+    STREETLIGHT: "bg-yellow-100 text-yellow-800",
+    ROAD_DAMAGE: "bg-red-100 text-red-800",
+    WATER_SUPPLY: "bg-cyan-100 text-cyan-800",
+    OTHER: "bg-gray-100 text-gray-800",
   };
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium capitalize ${colors[severity]}`}>
-      {severity}
+    <span
+      className={`px-2 py-0.5 rounded text-xs font-medium ${
+        colors[type] || colors.OTHER
+      }`}
+    >
+      {type.replace(/_/g, " ")}
     </span>
   );
 };
@@ -136,21 +188,42 @@ export default function MapPage() {
     type: "all",
     status: "all",
   });
-  const [issues, setIssues] = useState(mockIssues);
+  const [issues, setIssues] = useState<Issue[]>(mockIssues);
 
   useEffect(() => {
-    // Simulate loading
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchIssues = async () => {
+      try {
+        const statusFilters =
+          filters.status !== "all" ? [filters.status] : undefined;
+        const typeFilters = filters.type !== "all" ? [filters.type] : undefined;
+
+        const result = await issuesApi.getAll({
+          status: statusFilters,
+          type: typeFilters,
+        });
+
+        if (result.success && result.data?.items) {
+          setIssues(result.data.items as Issue[]);
+        }
+      } catch (error) {
+        console.error("Error fetching issues:", error);
+        // Keep using mock data
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchIssues();
+  }, [filters]);
 
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
-      issue.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      issue.location.address.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = filters.type === "all" || issue.type === filters.type;
-    const matchesStatus = filters.status === "all" || issue.status === filters.status;
-    return matchesSearch && matchesType && matchesStatus;
+      issue.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (issue.location.address
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()) ??
+        false);
+    return matchesSearch;
   });
 
   return (
@@ -177,7 +250,9 @@ export default function MapPage() {
               <div className="flex flex-wrap gap-3 items-center">
                 <Select
                   value={filters.type}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, type: value }))}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, type: value }))
+                  }
                 >
                   <SelectTrigger className="w-[150px]">
                     <Filter className="h-4 w-4 mr-2" />
@@ -194,7 +269,9 @@ export default function MapPage() {
 
                 <Select
                   value={filters.status}
-                  onValueChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, status: value }))
+                  }
                 >
                   <SelectTrigger className="w-[150px]">
                     <SelectValue placeholder="Status" />
@@ -253,16 +330,20 @@ export default function MapPage() {
                       <MapPin className="h-12 w-12 mx-auto text-primary mb-4" />
                       <CardTitle>Interactive Map</CardTitle>
                       <CardDescription>
-                        Map integration requires Mapbox or Google Maps API key. Configure
-                        your API keys in the environment variables to enable the interactive
-                        map view.
+                        Map integration requires Mapbox or Google Maps API key.
+                        Configure your API keys in the environment variables to
+                        enable the interactive map view.
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Found <strong>{filteredIssues.length}</strong> issues in view
+                        Found <strong>{filteredIssues.length}</strong> issues in
+                        view
                       </p>
-                      <Button variant="outline" onClick={() => setViewMode("list")}>
+                      <Button
+                        variant="outline"
+                        onClick={() => setViewMode("list")}
+                      >
                         <List className="h-4 w-4 mr-2" />
                         Switch to List View
                       </Button>
@@ -303,7 +384,9 @@ export default function MapPage() {
                   <Card className="text-center py-12">
                     <CardContent>
                       <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No issues found</h3>
+                      <h3 className="text-lg font-semibold mb-2">
+                        No issues found
+                      </h3>
                       <p className="text-muted-foreground">
                         Try adjusting your filters or search query
                       </p>
@@ -311,7 +394,10 @@ export default function MapPage() {
                   </Card>
                 ) : (
                   filteredIssues.map((issue) => (
-                    <Card key={issue.id} className="hover:shadow-md transition-shadow cursor-pointer">
+                    <Card
+                      key={issue.id}
+                      className="hover:shadow-md transition-shadow cursor-pointer"
+                    >
                       <CardContent className="p-6">
                         <div className="flex gap-4">
                           {/* Thumbnail placeholder */}
@@ -321,7 +407,10 @@ export default function MapPage() {
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2 mb-2">
-                              <h3 className="font-semibold truncate">{issue.title}</h3>
+                              <h3 className="font-semibold truncate">
+                                {issue.description.slice(0, 50)}
+                                {issue.description.length > 50 ? "..." : ""}
+                              </h3>
                               <div className="flex items-center gap-2 shrink-0">
                                 {getStatusIcon(issue.status)}
                                 {getStatusBadge(issue.status)}
@@ -329,16 +418,17 @@ export default function MapPage() {
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-2">
-                              <span className="capitalize">{issue.type}</span>
-                              <span>•</span>
-                              {getSeverityBadge(issue.severity)}
+                              {getTypeBadge(issue.type)}
                               <span>•</span>
                               <span>{issue.createdAt}</span>
                             </div>
 
                             <div className="flex items-center gap-1 text-sm text-muted-foreground">
                               <MapPin className="h-3 w-3" />
-                              <span className="truncate">{issue.location.address}</span>
+                              <span className="truncate">
+                                {issue.location.address ||
+                                  `${issue.location.latitude}, ${issue.location.longitude}`}
+                              </span>
                             </div>
                           </div>
                         </div>

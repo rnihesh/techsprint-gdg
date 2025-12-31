@@ -1,4 +1,5 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
 interface ApiOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -8,12 +9,16 @@ interface ApiOptions {
 }
 
 interface ApiResponse<T> {
+  success: boolean;
   data?: T;
-  error?: string;
-  status: number;
+  error?: string | null;
+  timestamp: string;
 }
 
-async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<ApiResponse<T>> {
+async function api<T>(
+  endpoint: string,
+  options: ApiOptions = {}
+): Promise<ApiResponse<T>> {
   const { method = "GET", body, headers = {}, token } = options;
 
   const requestHeaders: Record<string, string> = {
@@ -36,19 +41,18 @@ async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<ApiRe
 
     if (!response.ok) {
       return {
+        success: false,
         error: data.error || "An error occurred",
-        status: response.status,
+        timestamp: new Date().toISOString(),
       };
     }
 
-    return {
-      data,
-      status: response.status,
-    };
+    return data;
   } catch (error) {
     return {
+      success: false,
       error: error instanceof Error ? error.message : "Network error",
-      status: 500,
+      timestamp: new Date().toISOString(),
     };
   }
 }
@@ -56,43 +60,62 @@ async function api<T>(endpoint: string, options: ApiOptions = {}): Promise<ApiRe
 // Issue APIs
 export const issuesApi = {
   getAll: (params?: {
-    status?: string;
-    type?: string;
-    municipality?: string;
+    status?: string[];
+    type?: string[];
+    municipalityId?: string;
     page?: number;
-    limit?: number;
+    pageSize?: number;
   }) => {
     const searchParams = new URLSearchParams();
     if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, String(value));
-        }
-      });
+      if (params.status) {
+        params.status.forEach((s) => searchParams.append("status", s));
+      }
+      if (params.type) {
+        params.type.forEach((t) => searchParams.append("type", t));
+      }
+      if (params.municipalityId) {
+        searchParams.append("municipalityId", params.municipalityId);
+      }
+      if (params.page) {
+        searchParams.append("page", String(params.page));
+      }
+      if (params.pageSize) {
+        searchParams.append("pageSize", String(params.pageSize));
+      }
     }
     const query = searchParams.toString();
-    return api<{ issues: unknown[]; pagination: unknown }>(`/issues${query ? `?${query}` : ""}`);
+    return api<{
+      items: unknown[];
+      total: number;
+      page: number;
+      pageSize: number;
+      hasMore: boolean;
+    }>(`/issues${query ? `?${query}` : ""}`);
   },
 
   getById: (id: string) => api<unknown>(`/issues/${id}`),
 
-  getByBounds: (bounds: { north: number; south: number; east: number; west: number }) => {
+  getByBounds: (bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  }) => {
     const params = new URLSearchParams({
       north: String(bounds.north),
       south: String(bounds.south),
       east: String(bounds.east),
       west: String(bounds.west),
     });
-    return api<{ issues: unknown[] }>(`/issues/map?${params}`);
+    return api<unknown[]>(`/issues/map/bounds?${params}`);
   },
 
   create: (data: {
-    title: string;
     description: string;
-    type: string;
-    severity: string;
-    location: { lat: number; lng: number; address?: string };
-    images?: string[];
+    type?: string;
+    location: { latitude: number; longitude: number };
+    imageUrl?: string;
   }) =>
     api<unknown>("/issues", {
       method: "POST",
@@ -101,7 +124,7 @@ export const issuesApi = {
 
   respond: (
     id: string,
-    data: { response: string; status: string; images?: string[] },
+    data: { resolutionNote: string; resolutionImageUrl?: string },
     token: string
   ) =>
     api<unknown>(`/issues/${id}/respond`, {
@@ -113,7 +136,12 @@ export const issuesApi = {
 
 // Municipality APIs
 export const municipalitiesApi = {
-  getLeaderboard: (params?: { timeRange?: string; limit?: number }) => {
+  getAll: (params?: {
+    state?: string;
+    district?: string;
+    page?: number;
+    pageSize?: number;
+  }) => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -123,24 +151,50 @@ export const municipalitiesApi = {
       });
     }
     const query = searchParams.toString();
-    return api<{ leaderboard: unknown[] }>(`/municipalities/leaderboard${query ? `?${query}` : ""}`);
+    return api<{
+      items: unknown[];
+      total: number;
+      page: number;
+      pageSize: number;
+      hasMore: boolean;
+    }>(`/municipalities${query ? `?${query}` : ""}`);
+  },
+
+  getLeaderboard: (params?: { page?: number; pageSize?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+    const query = searchParams.toString();
+    return api<{
+      entries: unknown[];
+      lastUpdated: string;
+      totalMunicipalities: number;
+    }>(`/municipalities/leaderboard${query ? `?${query}` : ""}`);
   },
 
   getById: (id: string) => api<unknown>(`/municipalities/${id}`),
 
-  getStats: (id: string, token: string) =>
-    api<unknown>(`/municipalities/${id}/stats`, { token }),
+  getStats: (id: string) => api<unknown>(`/municipalities/${id}/stats`),
 };
 
 // Auth APIs
 export const authApi = {
-  getProfile: (token: string) =>
-    api<unknown>("/auth/profile", { token }),
+  getMe: (token: string) => api<unknown>("/auth/me", { token }),
 
-  updateProfile: (data: { displayName?: string }, token: string) =>
-    api<unknown>("/auth/profile", {
-      method: "PUT",
-      body: data,
+  verify: (token: string) =>
+    api<unknown>("/auth/verify", {
+      method: "POST",
+      token,
+    }),
+
+  login: (token: string) =>
+    api<unknown>("/auth/login", {
+      method: "POST",
       token,
     }),
 };

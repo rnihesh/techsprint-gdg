@@ -4,13 +4,26 @@ import { useState } from "react";
 import Link from "next/link";
 import { Header, Footer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { issuesApi } from "@/lib/api";
 import {
   MapPin,
   Camera,
@@ -30,23 +43,16 @@ import {
 } from "lucide-react";
 
 const issueTypes = [
-  { value: "pothole", label: "Pothole", icon: Construction },
-  { value: "garbage", label: "Garbage", icon: Trash2 },
-  { value: "drainage", label: "Drainage", icon: Droplets },
-  { value: "streetlight", label: "Streetlight", icon: Lightbulb },
-  { value: "road_damage", label: "Road Damage", icon: Construction },
-  { value: "water_supply", label: "Water Supply", icon: Droplets },
-  { value: "encroachment", label: "Encroachment", icon: Building },
-  { value: "sanitation", label: "Sanitation", icon: Trash2 },
-  { value: "parks", label: "Parks & Gardens", icon: TreePine },
-  { value: "other", label: "Other", icon: HelpCircle },
-];
-
-const severityOptions = [
-  { value: "low", label: "Low - Minor inconvenience" },
-  { value: "medium", label: "Medium - Causes problems" },
-  { value: "high", label: "High - Urgent attention needed" },
-  { value: "critical", label: "Critical - Safety hazard" },
+  { value: "POTHOLE", label: "Pothole", icon: Construction },
+  { value: "GARBAGE", label: "Garbage", icon: Trash2 },
+  { value: "DRAINAGE", label: "Drainage", icon: Droplets },
+  { value: "STREETLIGHT", label: "Streetlight", icon: Lightbulb },
+  { value: "ROAD_DAMAGE", label: "Road Damage", icon: Construction },
+  { value: "WATER_SUPPLY", label: "Water Supply", icon: Droplets },
+  { value: "ENCROACHMENT", label: "Encroachment", icon: Building },
+  { value: "SANITATION", label: "Sanitation", icon: Trash2 },
+  { value: "PARKS", label: "Parks & Gardens", icon: TreePine },
+  { value: "OTHER", label: "Other", icon: HelpCircle },
 ];
 
 const stats = [
@@ -58,33 +64,53 @@ const stats = [
 
 export default function HomePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationCoords, setLocationCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [formData, setFormData] = useState({
-    title: "",
     description: "",
     issueType: "",
-    severity: "",
     location: "",
     images: [] as File[],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!locationCoords) {
+      toast.error("Please provide a location");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // TODO: Implement actual submission
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      toast.success("Issue reported successfully!", {
-        description: "Your complaint has been registered anonymously.",
+      const result = await issuesApi.create({
+        description: formData.description,
+        type: formData.issueType || undefined,
+        location: {
+          latitude: locationCoords.lat,
+          longitude: locationCoords.lng,
+        },
       });
-      setFormData({
-        title: "",
-        description: "",
-        issueType: "",
-        severity: "",
-        location: "",
-        images: [],
-      });
+
+      if (result.success) {
+        toast.success("Issue reported successfully!", {
+          description: "Your complaint has been registered anonymously.",
+        });
+        setFormData({
+          description: "",
+          issueType: "",
+          location: "",
+          images: [],
+        });
+        setLocationCoords(null);
+      } else {
+        toast.error("Failed to submit issue", {
+          description: result.error || "Please try again later.",
+        });
+      }
     } catch {
       toast.error("Failed to submit issue", {
         description: "Please try again later.",
@@ -99,6 +125,7 @@ export default function HomePage() {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          setLocationCoords({ lat: latitude, lng: longitude });
           setFormData((prev) => ({
             ...prev,
             location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
@@ -129,11 +156,13 @@ export default function HomePage() {
               <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
                 Report Civic Issues.
                 <br />
-                <span className="text-primary">Hold Municipalities Accountable.</span>
+                <span className="text-primary">
+                  Hold Municipalities Accountable.
+                </span>
               </h1>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Report potholes, garbage, drainage problems and more. Stay anonymous.
-                Track resolution. Make your city better.
+                Report potholes, garbage, drainage problems and more. Stay
+                anonymous. Track resolution. Make your city better.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" asChild>
@@ -164,8 +193,12 @@ export default function HomePage() {
                     <div className="flex justify-center mb-2">
                       <Icon className="h-8 w-8 text-primary" />
                     </div>
-                    <div className="text-2xl md:text-3xl font-bold">{stat.value}</div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
+                    <div className="text-2xl md:text-3xl font-bold">
+                      {stat.value}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {stat.label}
+                    </div>
                   </div>
                 );
               })}
@@ -179,7 +212,8 @@ export default function HomePage() {
             <div className="text-center mb-12">
               <h2 className="text-3xl font-bold mb-4">How It Works</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                A simple, transparent process to report issues and track their resolution.
+                A simple, transparent process to report issues and track their
+                resolution.
               </p>
             </div>
             <div className="grid md:grid-cols-3 gap-8">
@@ -192,8 +226,8 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent>
                   <CardDescription>
-                    Take a photo, add location, and describe the issue. Stay completely
-                    anonymous if you prefer.
+                    Take a photo, add location, and describe the issue. Stay
+                    completely anonymous if you prefer.
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -207,8 +241,8 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent>
                   <CardDescription>
-                    Our AI verifies the authenticity of reports and forwards them to the
-                    concerned municipality.
+                    Our AI verifies the authenticity of reports and forwards
+                    them to the concerned municipality.
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -222,8 +256,8 @@ export default function HomePage() {
                 </CardHeader>
                 <CardContent>
                   <CardDescription>
-                    Monitor progress, see municipality responses, and view the public
-                    accountability leaderboard.
+                    Monitor progress, see municipality responses, and view the
+                    public accountability leaderboard.
                   </CardDescription>
                 </CardContent>
               </Card>
@@ -237,10 +271,12 @@ export default function HomePage() {
             <div className="max-w-2xl mx-auto">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-2xl">Report a Civic Issue</CardTitle>
+                  <CardTitle className="text-2xl">
+                    Report a Civic Issue
+                  </CardTitle>
                   <CardDescription>
-                    Your report will be submitted anonymously. All fields marked with * are
-                    required.
+                    Your report will be submitted anonymously. All fields marked
+                    with * are required.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -273,20 +309,6 @@ export default function HomePage() {
                       </Select>
                     </div>
 
-                    {/* Title */}
-                    <div className="space-y-2">
-                      <Label htmlFor="title">Title *</Label>
-                      <Input
-                        id="title"
-                        placeholder="Brief title for the issue"
-                        value={formData.title}
-                        onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, title: e.target.value }))
-                        }
-                        required
-                      />
-                    </div>
-
                     {/* Description */}
                     <div className="space-y-2">
                       <Label htmlFor="description">Description *</Label>
@@ -296,32 +318,13 @@ export default function HomePage() {
                         rows={4}
                         value={formData.description}
                         onChange={(e) =>
-                          setFormData((prev) => ({ ...prev, description: e.target.value }))
+                          setFormData((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
                         }
                         required
                       />
-                    </div>
-
-                    {/* Severity */}
-                    <div className="space-y-2">
-                      <Label htmlFor="severity">Severity *</Label>
-                      <Select
-                        value={formData.severity}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({ ...prev, severity: value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select severity level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {severityOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
                     </div>
 
                     {/* Location */}
@@ -330,15 +333,36 @@ export default function HomePage() {
                       <div className="flex gap-2">
                         <Input
                           id="location"
-                          placeholder="Address or coordinates"
+                          placeholder="Click the pin to detect location"
                           value={formData.location}
-                          onChange={(e) =>
-                            setFormData((prev) => ({ ...prev, location: e.target.value }))
-                          }
+                          onChange={(e) => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              location: e.target.value,
+                            }));
+                            // Try to parse coordinates if manually entered
+                            const coords = e.target.value
+                              .split(",")
+                              .map((s) => parseFloat(s.trim()));
+                            if (
+                              coords.length === 2 &&
+                              !isNaN(coords[0]) &&
+                              !isNaN(coords[1])
+                            ) {
+                              setLocationCoords({
+                                lat: coords[0],
+                                lng: coords[1],
+                              });
+                            }
+                          }}
                           required
                           className="flex-1"
                         />
-                        <Button type="button" variant="outline" onClick={handleGetLocation}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleGetLocation}
+                        >
                           <MapPin className="h-4 w-4" />
                         </Button>
                       </div>
@@ -371,7 +395,9 @@ export default function HomePage() {
                           variant="outline"
                           size="sm"
                           className="mt-4"
-                          onClick={() => document.getElementById("images")?.click()}
+                          onClick={() =>
+                            document.getElementById("images")?.click()
+                          }
                         >
                           Upload Photos
                         </Button>
@@ -391,14 +417,19 @@ export default function HomePage() {
                           Your identity is protected
                         </p>
                         <p className="text-xs text-green-700 dark:text-green-300">
-                          Reports are submitted anonymously. No personal information is
-                          collected or shared.
+                          Reports are submitted anonymously. No personal
+                          information is collected or shared.
                         </p>
                       </div>
                     </div>
 
                     {/* Submit Button */}
-                    <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      size="lg"
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? (
                         <>Submitting...</>
                       ) : (
@@ -424,8 +455,9 @@ export default function HomePage() {
                   Are you a Municipality Official?
                 </h2>
                 <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                  Register your municipality to respond to citizen complaints, track
-                  performance, and improve your public accountability score.
+                  Register your municipality to respond to citizen complaints,
+                  track performance, and improve your public accountability
+                  score.
                 </p>
                 <Button size="lg" variant="secondary" asChild>
                   <Link href="/auth/register">Register Municipality</Link>
