@@ -122,6 +122,9 @@ importers:
       date-fns:
         specifier: ^3.2.0
         version: 3.6.0
+      firebase:
+        specifier: ^10.14.1
+        version: 10.14.1
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.2.3)

@@ -48,5 +48,9 @@ Thumbs.db
 # TypeScript
 *.tsbuildinfo
 
+# Firebase Service Account Keys (NEVER commit these!)
+serviceAccountKey.json
+*-firebase-adminsdk-*.json
+
 # Misc
 .turbo/

@@ -1,16 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, MapPin, Trophy, Building2, User, LogIn } from "lucide-react";
+import { Menu, MapPin, Trophy, Building2, User, LogIn, LogOut, LayoutDashboard, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { toast } from "sonner";
 
 const navigation = [
   { name: "Report Issue", href: "/", icon: MapPin },
@@ -21,9 +19,22 @@ const navigation = [
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  // TODO: Replace with actual auth state
-  const isLoggedIn = false;
-  const isMunicipalityUser = false;
+  const { user, userProfile, signOut, loading } = useAuth();
+  const router = useRouter();
+  
+  const isLoggedIn = !!user;
+  const isMunicipalityUser = userProfile?.role === "municipality";
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setIsOpen(false);
+      toast.success("Signed out successfully");
+      router.push("/");
+    } catch (error) {
+      toast.error("Failed to sign out");
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -53,32 +64,25 @@ export function Header() {
 
         {/* Desktop Auth */}
         <div className="hidden md:flex items-center space-x-4">
-          {isLoggedIn ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {isMunicipalityUser && (
-                  <DropdownMenuItem asChild>
-                    <Link href="/municipality/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem>Sign Out</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Button asChild variant="outline" size="sm">
-              <Link href="/auth/login">
-                <LogIn className="h-4 w-4 mr-2" />
-                Municipality Login
-              </Link>
+          {loading ? (
+            <Button variant="ghost" size="icon" disabled>
+              <Loader2 className="h-5 w-5 animate-spin" />
             </Button>
+          ) : isLoggedIn ? (
+            <UserMenu />
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/auth/login">
+                  Sign In
+                </Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/auth/register">
+                  Get Started
+                </Link>
+              </Button>
+            </div>
           )}
         </div>
 
@@ -106,7 +110,11 @@ export function Header() {
                 );
               })}
               <hr className="my-4" />
-              {isLoggedIn ? (
+              {loading ? (
+                <div className="flex justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              ) : isLoggedIn ? (
                 <>
                   {isMunicipalityUser && (
                     <Link
@@ -114,7 +122,7 @@ export function Header() {
                       onClick={() => setIsOpen(false)}
                       className="flex items-center space-x-3 text-lg font-medium text-muted-foreground hover:text-primary"
                     >
-                      <Building2 className="h-5 w-5" />
+                      <LayoutDashboard className="h-5 w-5" />
                       <span>Dashboard</span>
                     </Link>
                   )}
@@ -126,17 +134,25 @@ export function Header() {
                     <User className="h-5 w-5" />
                     <span>Profile</span>
                   </Link>
-                  <Button variant="outline" className="w-full">
+                  <Button variant="outline" className="w-full" onClick={handleSignOut}>
+                    <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </Button>
                 </>
               ) : (
-                <Button asChild className="w-full">
-                  <Link href="/auth/login" onClick={() => setIsOpen(false)}>
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Municipality Login
-                  </Link>
-                </Button>
+                <>
+                  <Button asChild variant="outline" className="w-full">
+                    <Link href="/auth/login" onClick={() => setIsOpen(false)}>
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Sign In
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full">
+                    <Link href="/auth/register" onClick={() => setIsOpen(false)}>
+                      Get Started
+                    </Link>
+                  </Button>
+                </>
               )}
             </nav>
           </SheetContent>

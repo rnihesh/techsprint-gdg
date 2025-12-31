@@ -1,16 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { MapPin, ArrowLeft, Building2, UserPlus } from "lucide-react";
+import { MapPin, ArrowLeft, Building2, UserPlus, Loader2, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 const indianStates = [
   "Andhra Pradesh",
@@ -44,12 +47,21 @@ const indianStates = [
   "West Bengal",
 ];
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { signUp, user, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  const isMunicipalityRegistration = searchParams.get("type") === "municipality";
+  const totalSteps = isMunicipalityRegistration ? 3 : 1;
+  
   const [formData, setFormData] = useState({
     // Account Details
+    name: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -65,15 +77,87 @@ export default function RegisterPage() {
     documents: null as File | null,
   });
 
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push("/municipality/dashboard");
+    }
+  }, [user, authLoading, router]);
+
+  const handleGoogleSuccess = () => {
+    toast.success("Account created!", {
+      description: "Welcome to Nagarik Seva!",
+    });
+    
+    if (isMunicipalityRegistration) {
+      // For municipality registration, they need to complete the form
+      setStep(2);
+    } else {
+      router.push("/");
+    }
+  };
+
+  const handleGoogleError = (error: string) => {
+    toast.error("Google sign-in failed", {
+      description: error,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // For citizen registration (single step)
+    if (!isMunicipalityRegistration) {
+      if (formData.password !== formData.confirmPassword) {
+        toast.error("Passwords don't match");
+        return;
+      }
+      if (formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        await signUp(formData.email, formData.password, formData.name);
+        toast.success("Account created!", {
+          description: "Please check your email to verify your account.",
+        });
+        router.push("/");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Registration failed";
+        toast.error("Registration failed", { description: message });
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+    
+    // Municipality registration multi-step
     if (step === 1) {
       if (formData.password !== formData.confirmPassword) {
         toast.error("Passwords do not match");
         return;
       }
-      setStep(2);
+      if (formData.password.length < 6) {
+        toast.error("Password must be at least 6 characters");
+        return;
+      }
+      
+      // Create the account first
+      setIsLoading(true);
+      try {
+        await signUp(formData.email, formData.password, formData.name);
+        toast.success("Account created!", {
+          description: "Now let's add your municipality details.",
+        });
+        setStep(2);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Registration failed";
+        toast.error("Registration failed", { description: message });
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
 
@@ -82,15 +166,16 @@ export default function RegisterPage() {
       return;
     }
 
+    // Final step - submit municipality registration
     setIsLoading(true);
 
     try {
-      // TODO: Implement Firebase registration and Firestore document creation
+      // TODO: Submit municipality registration to Firestore
       await new Promise((resolve) => setTimeout(resolve, 2000));
       toast.success("Registration submitted!", {
         description: "Your application will be reviewed within 3-5 business days.",
       });
-      router.push("/auth/login");
+      router.push("/municipality/dashboard");
     } catch {
       toast.error("Registration failed", {
         description: "Please try again later.",
@@ -99,6 +184,14 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
@@ -125,73 +218,162 @@ export default function RegisterPage() {
         <Card className="w-full max-w-lg">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Building2 className="h-6 w-6 text-primary" />
+              {isMunicipalityRegistration ? (
+                <Building2 className="h-6 w-6 text-primary" />
+              ) : (
+                <UserPlus className="h-6 w-6 text-primary" />
+              )}
             </div>
-            <CardTitle className="text-2xl">Register Municipality</CardTitle>
+            <CardTitle className="text-2xl">
+              {isMunicipalityRegistration ? "Register Municipality" : "Create Account"}
+            </CardTitle>
             <CardDescription>
-              Step {step} of 3: {step === 1 ? "Account Details" : step === 2 ? "Municipality Information" : "Verification"}
+              {isMunicipalityRegistration 
+                ? `Step ${step} of ${totalSteps}: ${step === 1 ? "Account Details" : step === 2 ? "Municipality Information" : "Verification"}`
+                : "Join Nagarik Seva to report civic issues"
+              }
             </CardDescription>
             
-            {/* Progress */}
-            <div className="flex gap-2 mt-4">
-              {[1, 2, 3].map((s) => (
-                <div
-                  key={s}
-                  className={`flex-1 h-2 rounded-full ${
-                    s <= step ? "bg-primary" : "bg-muted"
-                  }`}
-                />
-              ))}
-            </div>
+            {/* Progress - only for municipality registration */}
+            {isMunicipalityRegistration && (
+              <div className="flex gap-2 mt-4">
+                {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
+                  <div
+                    key={s}
+                    className={`flex-1 h-2 rounded-full ${
+                      s <= step ? "bg-primary" : "bg-muted"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            {/* Google Sign In - only on step 1 */}
+            {step === 1 && (
+              <>
+                <GoogleSignInButton 
+                  onSuccess={handleGoogleSuccess}
+                  onError={handleGoogleError}
+                />
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator className="w-full" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or register with email
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-4">
               {step === 1 && (
                 <>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Official Email *</Label>
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="Enter your full name"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      required
+                      autoComplete="name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">
+                      {isMunicipalityRegistration ? "Official Email *" : "Email *"}
+                    </Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder="contact@municipality.gov.in"
+                      placeholder={isMunicipalityRegistration ? "contact@municipality.gov.in" : "you@example.com"}
                       value={formData.email}
                       onChange={(e) =>
                         setFormData((prev) => ({ ...prev, email: e.target.value }))
                       }
                       required
+                      autoComplete="email"
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Use your official government email address
-                    </p>
+                    {isMunicipalityRegistration && (
+                      <p className="text-xs text-muted-foreground">
+                        Use your official government email address
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Password *</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Create a strong password"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, password: e.target.value }))
-                      }
-                      required
-                      minLength={8}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Create a strong password"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, password: e.target.value }))
+                        }
+                        required
+                        minLength={6}
+                        autoComplete="new-password"
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Must be at least 6 characters
+                    </p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password *</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Confirm your password"
-                      value={formData.confirmPassword}
-                      onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))
-                      }
-                      required
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Confirm your password"
+                        value={formData.confirmPassword}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                        }
+                        required
+                        autoComplete="new-password"
+                        className="pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </>
               )}
@@ -362,33 +544,75 @@ export default function RegisterPage() {
                     variant="outline"
                     className="flex-1"
                     onClick={() => setStep(step - 1)}
+                    disabled={isLoading}
                   >
                     Back
                   </Button>
                 )}
                 <Button type="submit" className="flex-1" disabled={isLoading}>
                   {isLoading ? (
-                    "Submitting..."
-                  ) : step === 3 ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {isMunicipalityRegistration && step === totalSteps ? "Submitting..." : "Creating account..."}
+                    </>
+                  ) : isMunicipalityRegistration && step === totalSteps ? (
                     <>
                       <UserPlus className="h-4 w-4 mr-2" />
                       Submit Registration
                     </>
-                  ) : (
+                  ) : isMunicipalityRegistration ? (
                     "Continue"
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Create Account
+                    </>
                   )}
                 </Button>
               </div>
             </form>
 
-            <div className="mt-6 text-center text-sm">
+            {/* Terms */}
+            <p className="text-xs text-center text-muted-foreground">
+              By creating an account, you agree to our{" "}
+              <Link href="/terms" className="text-primary hover:underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="text-primary hover:underline">
+                Privacy Policy
+              </Link>
+            </p>
+
+            <div className="text-center text-sm">
               <span className="text-muted-foreground">
                 Already have an account?{" "}
               </span>
-              <Link href="/auth/login" className="text-primary hover:underline">
+              <Link href="/auth/login" className="text-primary hover:underline font-medium">
                 Sign in
               </Link>
             </div>
+
+            {/* Switch registration type */}
+            {step === 1 && (
+              <div className="pt-4 border-t text-center text-sm">
+                {isMunicipalityRegistration ? (
+                  <>
+                    <span className="text-muted-foreground">Not a municipality? </span>
+                    <Link href="/auth/register" className="text-primary hover:underline font-medium">
+                      Register as citizen
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-muted-foreground">Are you a municipality official? </span>
+                    <Link href="/auth/register?type=municipality" className="text-primary hover:underline font-medium">
+                      Register municipality
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>
@@ -398,5 +622,17 @@ export default function RegisterPage() {
         <p>&copy; {new Date().getFullYear()} Nagarik Seva. All rights reserved.</p>
       </footer>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 }
