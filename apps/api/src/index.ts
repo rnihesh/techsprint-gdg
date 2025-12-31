@@ -1,0 +1,41 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+
+import { issueRoutes } from './routes/issues';
+import { municipalityRoutes } from './routes/municipalities';
+import { authRoutes } from './routes/auth';
+import { healthRoutes } from './routes/health';
+import { errorHandler } from './middleware/errorHandler';
+import { notFoundHandler } from './middleware/notFoundHandler';
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Middleware
+app.use(helmet());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  credentials: true
+}));
+app.use(morgan('combined'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// Routes
+app.use('/api/health', healthRoutes);
+app.use('/api/issues', issueRoutes);
+app.use('/api/municipalities', municipalityRoutes);
+app.use('/api/auth', authRoutes);
+
+// Error handling
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+app.listen(PORT, () => {
+  console.log(`🚀 API Server running on http://localhost:${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+});
+
+export default app;

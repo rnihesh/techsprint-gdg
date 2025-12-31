@@ -1,0 +1,25 @@
+{
+  "name": "techsprint-gdg",
+  "version": "1.0.0",
+  "description": "Civic Issue Reporting and Municipal Accountability Platform for India",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:web": "pnpm --filter @techsprint/web dev",
+    "dev:api": "pnpm --filter @techsprint/api dev",
+    "build": "pnpm run --parallel build",
+    "build:web": "pnpm --filter @techsprint/web build",
+    "build:api": "pnpm --filter @techsprint/api build",
+    "lint": "pnpm run --parallel lint",
+    "clean": "pnpm run --parallel clean",
+    "typecheck": "pnpm run --parallel typecheck"
+  },
+  "keywords": ["civic", "municipality", "governance", "transparency", "india"],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

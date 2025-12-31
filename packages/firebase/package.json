@@ -1,0 +1,40 @@
+{
+  "name": "@techsprint/firebase",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
+    },
+    "./admin": {
+      "types": "./src/admin.ts",
+      "import": "./src/admin.ts",
+      "require": "./src/admin.ts"
+    },
+    "./client": {
+      "types": "./src/client.ts",
+      "import": "./src/client.ts",
+      "require": "./src/client.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts src/admin.ts src/client.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts src/admin.ts src/client.ts --format cjs,esm --dts --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "firebase": "^10.7.1",
+    "firebase-admin": "^12.0.0"
+  },
+  "devDependencies": {
+    "@techsprint/types": "workspace:*",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "rimraf": "^5.0.5"
+  }
+}

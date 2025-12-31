@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "declaration": false,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@techsprint/types": ["../../packages/types/src/index.ts"],
+      "@techsprint/validation": ["../../packages/validation/src/index.ts"],
+      "@techsprint/utils": ["../../packages/utils/src/index.ts"],
+      "@techsprint/firebase": ["../../packages/firebase/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
