@@ -87,7 +87,7 @@ export default function HomePage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative py-20 md:py-32 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-background" />
+          <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-background to-background" />
           <div className="container relative">
             <div className="max-w-3xl mx-auto text-center space-y-8">
               <h1 className="text-4xl md:text-6xl font-bold tracking-tight">

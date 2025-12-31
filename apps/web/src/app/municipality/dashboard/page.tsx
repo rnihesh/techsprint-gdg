@@ -325,7 +325,7 @@ export default function MunicipalityDashboard() {
                           href={`/municipality/issues/${issue._id}`}
                           className="flex gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
                         >
-                          <div className="relative h-20 w-20 rounded-lg overflow-hidden flex-shrink-0">
+                          <div className="relative h-20 w-20 rounded-lg overflow-hidden shrink-0">
                             <Image
                               src={issue.imageUrl}
                               alt={issue.issueType}

@@ -205,13 +205,13 @@ export default function MapPage() {
         </div>
 
         {loading ? (
-          <Skeleton className="h-[600px] w-full" />
+          <Skeleton className="h-150 w-full" />
         ) : viewMode === "map" ? (
           <div className="grid lg:grid-cols-4 gap-6">
             {/* Map Container */}
             <div className="lg:col-span-3">
               <Card className="overflow-hidden">
-                <div className="relative h-[600px] bg-muted flex items-center justify-center">
+                <div className="relative h-150 bg-muted flex items-center justify-center">
                   <div className="text-center p-8">
                     <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
                     <h3 className="text-lg font-semibold mb-2">

@@ -327,7 +327,7 @@ export default function IssueDetailPage() {
                   >
                     <div className="flex items-start gap-4">
                       {response.imageUrl && (
-                        <div className="relative h-24 w-24 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="relative h-24 w-24 rounded-lg overflow-hidden shrink-0">
                           <Image
                             src={response.imageUrl}
                             alt="Response image"

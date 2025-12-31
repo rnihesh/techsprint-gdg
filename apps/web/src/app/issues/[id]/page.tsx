@@ -208,7 +208,7 @@ export default function IssueDetailPage() {
       <div className="min-h-screen bg-muted/50 py-8">
         <div className="container max-w-4xl">
           <Skeleton className="h-8 w-48 mb-6" />
-          <Skeleton className="h-[400px]" />
+          <Skeleton className="h-100" />
         </div>
       </div>
     );
@@ -446,7 +446,7 @@ export default function IssueDetailPage() {
                   className="inline-flex items-center text-sm text-primary hover:underline"
                 >
                   View on Google Maps
-                  <ArrowLeft className="h-3 w-3 ml-1 rotate-[135deg]" />
+                  <ArrowLeft className="h-3 w-3 ml-1 rotate-135" />
                 </a>
               </CardContent>
             </Card>
