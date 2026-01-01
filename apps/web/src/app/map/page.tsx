@@ -62,6 +62,7 @@ interface Issue {
   };
   createdAt: string;
   municipalityId: string;
+  imageUrls?: string[];
 }
 
 interface MunicipalityBounds {
@@ -431,10 +432,18 @@ export default function MapPage() {
                     >
                       <CardContent className="p-6">
                         <div className="flex gap-4">
-                          {/* Thumbnail placeholder */}
-                          <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center shrink-0">
-                            <MapPin className="h-8 w-8 text-muted-foreground" />
-                          </div>
+                          {/* Thumbnail */}
+                          {issue.imageUrls && issue.imageUrls.length > 0 ? (
+                            <img
+                              src={issue.imageUrls[0]}
+                              alt="Issue"
+                              className="h-20 w-20 object-cover rounded-lg shrink-0"
+                            />
+                          ) : (
+                            <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center shrink-0">
+                              <MapPin className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2 mb-2">

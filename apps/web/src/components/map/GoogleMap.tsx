@@ -23,6 +23,7 @@ interface Issue {
   };
   createdAt: string;
   municipalityId: string;
+  imageUrls?: string[];
 }
 
 interface MunicipalityBounds {
@@ -320,6 +321,16 @@ export function GoogleMapComponent({
           onCloseClick={() => setSelectedIssue(null)}
         >
           <div className="p-2 max-w-xs">
+            {/* Issue Image */}
+            {selectedIssue.imageUrls && selectedIssue.imageUrls.length > 0 && (
+              <div className="mb-2 -mx-2 -mt-2">
+                <img
+                  src={selectedIssue.imageUrls[0]}
+                  alt="Issue"
+                  className="w-full h-32 object-cover rounded-t"
+                />
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-2">
               {getStatusIcon(selectedIssue.status)}
               {getStatusBadge(selectedIssue.status)}
