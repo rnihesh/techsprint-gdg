@@ -116,13 +116,11 @@ export default function LoginPage() {
               <Building2 className="h-6 w-6 text-primary" />
             </div>
             <CardTitle className="text-2xl">Welcome Back</CardTitle>
-            <CardDescription>
-              Sign in to access your account
-            </CardDescription>
+            <CardDescription>Sign in to access your account</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Google Sign In */}
-            <GoogleSignInButton 
+            <GoogleSignInButton
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
             />
@@ -216,7 +214,10 @@ export default function LoginPage() {
                 <span className="text-muted-foreground">
                   Are you a municipality official?{" "}
                 </span>
-                <Link href="/auth/register?type=municipality" className="text-primary hover:underline font-medium">
+                <Link
+                  href="/auth/register?type=municipality"
+                  className="text-primary hover:underline font-medium"
+                >
                   Register your municipality
                 </Link>
               </div>

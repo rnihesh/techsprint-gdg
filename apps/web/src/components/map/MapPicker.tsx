@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useState, useEffect } from "react";
-import {
-  GoogleMap,
-  useJsApiLoader,
-  Marker,
-} from "@react-google-maps/api";
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { AlertTriangle, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -47,9 +43,10 @@ export function MapPicker({
 }: MapPickerProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [center, setCenter] = useState(selectedLocation || defaultCenter);
-  const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(
-    selectedLocation || null
-  );
+  const [markerPosition, setMarkerPosition] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(selectedLocation || null);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
@@ -160,7 +157,10 @@ export function MapPicker({
 
   return (
     <div className="space-y-2">
-      <div className="relative rounded-lg overflow-hidden border" style={{ height }}>
+      <div
+        className="relative rounded-lg overflow-hidden border"
+        style={{ height }}
+      >
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={center}
@@ -185,7 +185,7 @@ export function MapPicker({
             />
           )}
         </GoogleMap>
-        
+
         {/* Current Location Button */}
         <Button
           type="button"

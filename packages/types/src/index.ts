@@ -3,27 +3,29 @@
 // ============================================
 
 export const ISSUE_TYPES = [
-  'POTHOLE',
-  'GARBAGE',
-  'DRAINAGE',
-  'ROAD_DAMAGE',
-  'STREETLIGHT',
-  'WATER_SUPPLY',
-  'SEWAGE',
-  'ENCROACHMENT',
-  'OTHER'
+  "POTHOLE",
+  "GARBAGE",
+  "DRAINAGE",
+  "ROAD_DAMAGE",
+  "STREETLIGHT",
+  "WATER_SUPPLY",
+  "SEWAGE",
+  "ENCROACHMENT",
+  "SANITATION",
+  "PARKS",
+  "OTHER",
 ] as const;
 
-export type IssueType = typeof ISSUE_TYPES[number];
+export type IssueType = (typeof ISSUE_TYPES)[number];
 
 export const ISSUE_STATUS = [
-  'OPEN',
-  'RESPONDED',
-  'VERIFIED',
-  'NEEDS_MANUAL_REVIEW'
+  "OPEN",
+  "RESPONDED",
+  "VERIFIED",
+  "NEEDS_MANUAL_REVIEW",
 ] as const;
 
-export type IssueStatus = typeof ISSUE_STATUS[number];
+export type IssueStatus = (typeof ISSUE_STATUS)[number];
 
 // ============================================
 // GEOGRAPHIC TYPES
@@ -99,14 +101,14 @@ export interface RespondToIssueInput {
 // ============================================
 
 export const MUNICIPALITY_TYPES = [
-  'MUNICIPAL_CORPORATION',
-  'MUNICIPALITY',
-  'NAGAR_PANCHAYAT',
-  'GRAM_PANCHAYAT',
-  'CANTONMENT_BOARD'
+  "MUNICIPAL_CORPORATION",
+  "MUNICIPALITY",
+  "NAGAR_PANCHAYAT",
+  "GRAM_PANCHAYAT",
+  "CANTONMENT_BOARD",
 ] as const;
 
-export type MunicipalityType = typeof MUNICIPALITY_TYPES[number];
+export type MunicipalityType = (typeof MUNICIPALITY_TYPES)[number];
 
 export interface Municipality {
   id: string;
@@ -149,12 +151,12 @@ export interface MunicipalityStats {
 // ============================================
 
 export const USER_ROLES = [
-  'USER',
-  'MUNICIPALITY_USER',
-  'PLATFORM_MAINTAINER'
+  "USER",
+  "MUNICIPALITY_USER",
+  "PLATFORM_MAINTAINER",
 ] as const;
 
-export type UserRole = typeof USER_ROLES[number];
+export type UserRole = (typeof USER_ROLES)[number];
 
 export interface User {
   id: string;
@@ -168,7 +170,7 @@ export interface User {
 }
 
 export interface MunicipalityUser extends User {
-  role: 'MUNICIPALITY_USER';
+  role: "MUNICIPALITY_USER";
   municipalityId: string;
 }
 
@@ -258,7 +260,7 @@ export interface LeaderboardEntry {
   rank: number;
   municipality: Municipality;
   score: number;
-  trend: 'UP' | 'DOWN' | 'STABLE';
+  trend: "UP" | "DOWN" | "STABLE";
   previousRank: number | null;
 }
 

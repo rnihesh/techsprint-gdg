@@ -90,7 +90,7 @@ function ProfileContent() {
     setIsSaving(true);
     try {
       // TODO: Implement profile update API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success("Profile updated successfully");
       setIsEditing(false);
     } catch {
@@ -112,7 +112,7 @@ function ProfileContent() {
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
       <Header />
-      
+
       <main className="flex-1 container py-8 px-4">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Profile Header */}
@@ -125,7 +125,7 @@ function ProfileContent() {
                     {getInitials()}
                   </AvatarFallback>
                 </Avatar>
-                
+
                 <div className="flex-1 text-center md:text-left">
                   <div className="flex flex-col md:flex-row md:items-center gap-2 mb-2">
                     <h1 className="text-2xl font-bold">
@@ -180,7 +180,10 @@ function ProfileContent() {
                         id="displayName"
                         value={formData.displayName}
                         onChange={(e) =>
-                          setFormData({ ...formData, displayName: e.target.value })
+                          setFormData({
+                            ...formData,
+                            displayName: e.target.value,
+                          })
                         }
                       />
                     </div>
@@ -207,7 +210,11 @@ function ProfileContent() {
                         }
                       />
                     </div>
-                    <Button onClick={handleSave} disabled={isSaving} className="w-full">
+                    <Button
+                      onClick={handleSave}
+                      disabled={isSaving}
+                      className="w-full"
+                    >
                       {isSaving ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       ) : (
@@ -222,7 +229,9 @@ function ProfileContent() {
                       <User className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="text-sm text-muted-foreground">Name</p>
-                        <p className="font-medium">{user?.displayName || "Not set"}</p>
+                        <p className="font-medium">
+                          {user?.displayName || "Not set"}
+                        </p>
                       </div>
                     </div>
                     <Separator />
@@ -263,7 +272,9 @@ function ProfileContent() {
                   <div>
                     <p className="text-sm text-muted-foreground">Role</p>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium capitalize">{userProfile?.role || "user"}</p>
+                      <p className="font-medium capitalize">
+                        {userProfile?.role || "user"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -271,7 +282,9 @@ function ProfileContent() {
                 <div className="flex items-center gap-3">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Member Since</p>
+                    <p className="text-sm text-muted-foreground">
+                      Member Since
+                    </p>
                     <p className="font-medium">
                       {formatDate(userProfile?.createdAt)}
                     </p>
@@ -294,7 +307,9 @@ function ProfileContent() {
                     <div className="flex items-center gap-3">
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                       <div>
-                        <p className="text-sm text-muted-foreground">Municipality</p>
+                        <p className="text-sm text-muted-foreground">
+                          Municipality
+                        </p>
                         <p className="font-medium">
                           {userProfile?.municipalityId || "Not assigned"}
                         </p>
@@ -312,7 +327,8 @@ function ProfileContent() {
               <CardHeader>
                 <CardTitle>Become a Municipality Official</CardTitle>
                 <CardDescription>
-                  If you're a government official, you can register your municipality to respond to public complaints.
+                  If you're a government official, you can register your
+                  municipality to respond to public complaints.
                 </CardDescription>
               </CardHeader>
               <CardContent>

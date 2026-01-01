@@ -23,7 +23,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { MapPin, ArrowLeft, Building2, UserPlus, Loader2, Eye, EyeOff } from "lucide-react";
+import {
+  MapPin,
+  ArrowLeft,
+  Building2,
+  UserPlus,
+  Loader2,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { municipalitiesApi } from "@/lib/api";
@@ -69,10 +77,11 @@ function RegisterForm() {
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  
-  const isMunicipalityRegistration = searchParams.get("type") === "municipality";
+
+  const isMunicipalityRegistration =
+    searchParams.get("type") === "municipality";
   const totalSteps = isMunicipalityRegistration ? 3 : 1;
-  
+
   const [formData, setFormData] = useState({
     // Account Details
     name: "",
@@ -94,14 +103,14 @@ function RegisterForm() {
   // Handle redirects and step management for logged-in users
   useEffect(() => {
     if (authLoading) return;
-    
+
     if (user) {
       if (isMunicipalityRegistration) {
         // User is logged in and wants to register municipality - skip to step 2
         if (step === 1) {
           setStep(2);
           // Populate form with user's data
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             name: user.displayName || prev.name,
             email: user.email || prev.email,
@@ -118,7 +127,7 @@ function RegisterForm() {
     toast.success("Account created!", {
       description: "Welcome to CivicLemma!",
     });
-    
+
     if (isMunicipalityRegistration) {
       // For municipality registration, they need to complete the form
       setStep(2);
@@ -146,7 +155,7 @@ function RegisterForm() {
         toast.error("Password must be at least 6 characters");
         return;
       }
-      
+
       setIsLoading(true);
       try {
         await signUp(formData.email, formData.password, formData.name);
@@ -155,14 +164,15 @@ function RegisterForm() {
         });
         router.push("/");
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Registration failed";
+        const message =
+          err instanceof Error ? err.message : "Registration failed";
         toast.error("Registration failed", { description: message });
       } finally {
         setIsLoading(false);
       }
       return;
     }
-    
+
     // Municipality registration multi-step
     if (step === 1) {
       if (formData.password !== formData.confirmPassword) {
@@ -173,7 +183,7 @@ function RegisterForm() {
         toast.error("Password must be at least 6 characters");
         return;
       }
-      
+
       // Create the account first
       setIsLoading(true);
       try {
@@ -183,7 +193,8 @@ function RegisterForm() {
         });
         setStep(2);
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Registration failed";
+        const message =
+          err instanceof Error ? err.message : "Registration failed";
         toast.error("Registration failed", { description: message });
       } finally {
         setIsLoading(false);
@@ -209,25 +220,31 @@ function RegisterForm() {
       }
 
       // Submit municipality registration to API
-      const result = await municipalitiesApi.submitRegistration({
-        // User details
-        name: formData.name,
-        email: formData.email,
-        phone: formData.contactPhone,
-        // Municipality details
-        municipalityName: formData.municipalityName,
-        municipalityType: "MUNICIPALITY", // Default type
-        state: formData.state,
-        district: formData.district,
-        address: formData.address,
-        population: formData.population ? parseInt(formData.population, 10) : undefined,
-        // Verification
-        registrationNumber: formData.registrationNumber,
-      }, token);
+      const result = await municipalitiesApi.submitRegistration(
+        {
+          // User details
+          name: formData.name,
+          email: formData.email,
+          phone: formData.contactPhone,
+          // Municipality details
+          municipalityName: formData.municipalityName,
+          municipalityType: "MUNICIPALITY", // Default type
+          state: formData.state,
+          district: formData.district,
+          address: formData.address,
+          population: formData.population
+            ? parseInt(formData.population, 10)
+            : undefined,
+          // Verification
+          registrationNumber: formData.registrationNumber,
+        },
+        token
+      );
 
       if (result.success) {
         toast.success("Registration submitted!", {
-          description: "Your application will be reviewed within 3-5 business days.",
+          description:
+            "Your application will be reviewed within 3-5 business days.",
         });
         router.push("/municipality/pending");
       } else {
@@ -284,26 +301,35 @@ function RegisterForm() {
               )}
             </div>
             <CardTitle className="text-2xl">
-              {isMunicipalityRegistration ? "Register Municipality" : "Create Account"}
+              {isMunicipalityRegistration
+                ? "Register Municipality"
+                : "Create Account"}
             </CardTitle>
             <CardDescription>
-              {isMunicipalityRegistration 
-                ? `Step ${step} of ${totalSteps}: ${step === 1 ? "Account Details" : step === 2 ? "Municipality Information" : "Verification"}`
-                : "Join Nagarik Seva to report civic issues"
-              }
+              {isMunicipalityRegistration
+                ? `Step ${step} of ${totalSteps}: ${
+                    step === 1
+                      ? "Account Details"
+                      : step === 2
+                      ? "Municipality Information"
+                      : "Verification"
+                  }`
+                : "Join Nagarik Seva to report civic issues"}
             </CardDescription>
 
             {/* Progress - only for municipality registration */}
             {isMunicipalityRegistration && (
               <div className="flex gap-2 mt-4">
-                {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
-                  <div
-                    key={s}
-                    className={`flex-1 h-2 rounded-full ${
-                      s <= step ? "bg-primary" : "bg-muted"
-                    }`}
-                  />
-                ))}
+                {Array.from({ length: totalSteps }, (_, i) => i + 1).map(
+                  (s) => (
+                    <div
+                      key={s}
+                      className={`flex-1 h-2 rounded-full ${
+                        s <= step ? "bg-primary" : "bg-muted"
+                      }`}
+                    />
+                  )
+                )}
               </div>
             )}
           </CardHeader>
@@ -311,7 +337,7 @@ function RegisterForm() {
             {/* Google Sign In - only on step 1 */}
             {step === 1 && (
               <>
-                <GoogleSignInButton 
+                <GoogleSignInButton
                   onSuccess={handleGoogleSuccess}
                   onError={handleGoogleError}
                 />
@@ -340,7 +366,10 @@ function RegisterForm() {
                       placeholder="Enter your full name"
                       value={formData.name}
                       onChange={(e) =>
-                        setFormData((prev) => ({ ...prev, name: e.target.value }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
                       }
                       required
                       autoComplete="name"
@@ -349,12 +378,18 @@ function RegisterForm() {
 
                   <div className="space-y-2">
                     <Label htmlFor="email">
-                      {isMunicipalityRegistration ? "Official Email *" : "Email *"}
+                      {isMunicipalityRegistration
+                        ? "Official Email *"
+                        : "Email *"}
                     </Label>
                     <Input
                       id="email"
                       type="email"
-                      placeholder={isMunicipalityRegistration ? "contact@municipality.gov.in" : "you@example.com"}
+                      placeholder={
+                        isMunicipalityRegistration
+                          ? "contact@municipality.gov.in"
+                          : "you@example.com"
+                      }
                       value={formData.email}
                       onChange={(e) =>
                         setFormData((prev) => ({
@@ -382,9 +417,9 @@ function RegisterForm() {
                         value={formData.password}
                         onChange={(e) =>
                           setFormData((prev) => ({
-                          ...prev,
-                          password: e.target.value,
-                        }))
+                            ...prev,
+                            password: e.target.value,
+                          }))
                         }
                         required
                         minLength={6}
@@ -420,9 +455,9 @@ function RegisterForm() {
                         value={formData.confirmPassword}
                         onChange={(e) =>
                           setFormData((prev) => ({
-                          ...prev,
-                          confirmPassword: e.target.value,
-                        }))
+                            ...prev,
+                            confirmPassword: e.target.value,
+                          }))
                         }
                         required
                         autoComplete="new-password"
@@ -433,7 +468,9 @@ function RegisterForm() {
                         variant="ghost"
                         size="icon"
                         className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                       >
                         {showConfirmPassword ? (
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -646,7 +683,9 @@ function RegisterForm() {
                   {isLoading ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      {isMunicipalityRegistration && step === totalSteps ? "Submitting..." : "Creating account..."}
+                      {isMunicipalityRegistration && step === totalSteps
+                        ? "Submitting..."
+                        : "Creating account..."}
                     </>
                   ) : isMunicipalityRegistration && step === totalSteps ? (
                     <>
@@ -681,7 +720,10 @@ function RegisterForm() {
               <span className="text-muted-foreground">
                 Already have an account?{" "}
               </span>
-              <Link href="/auth/login" className="text-primary hover:underline font-medium">
+              <Link
+                href="/auth/login"
+                className="text-primary hover:underline font-medium"
+              >
                 Sign in
               </Link>
             </div>
@@ -691,15 +733,25 @@ function RegisterForm() {
               <div className="pt-4 border-t text-center text-sm">
                 {isMunicipalityRegistration ? (
                   <>
-                    <span className="text-muted-foreground">Not a municipality? </span>
-                    <Link href="/auth/register" className="text-primary hover:underline font-medium">
+                    <span className="text-muted-foreground">
+                      Not a municipality?{" "}
+                    </span>
+                    <Link
+                      href="/auth/register"
+                      className="text-primary hover:underline font-medium"
+                    >
                       Register as user
                     </Link>
                   </>
                 ) : (
                   <>
-                    <span className="text-muted-foreground">Are you a municipality official? </span>
-                    <Link href="/auth/register?type=municipality" className="text-primary hover:underline font-medium">
+                    <span className="text-muted-foreground">
+                      Are you a municipality official?{" "}
+                    </span>
+                    <Link
+                      href="/auth/register?type=municipality"
+                      className="text-primary hover:underline font-medium"
+                    >
                       Register municipality
                     </Link>
                   </>
@@ -722,11 +774,13 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      }
+    >
       <RegisterForm />
     </Suspense>
   );

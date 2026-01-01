@@ -49,6 +49,7 @@ const issueTypes = [
   { value: "STREETLIGHT", label: "Streetlight", icon: Lightbulb },
   { value: "ROAD_DAMAGE", label: "Road Damage", icon: Construction },
   { value: "WATER_SUPPLY", label: "Water Supply", icon: Droplets },
+  { value: "SEWAGE", label: "Sewage", icon: Droplets },
   { value: "ENCROACHMENT", label: "Encroachment", icon: Building },
   { value: "SANITATION", label: "Sanitation", icon: Trash2 },
   { value: "PARKS", label: "Parks & Gardens", icon: TreePine },
@@ -75,23 +76,25 @@ export default function ReportIssuePage() {
   // Redirect non-users (municipality and admin should use their dashboards)
   if (userProfile && userProfile.role !== "user") {
     router.replace(
-      userProfile.role === "admin" ? "/admin/dashboard" : "/municipality/dashboard"
+      userProfile.role === "admin"
+        ? "/admin/dashboard"
+        : "/municipality/dashboard"
     );
     return null;
   }
 
   const handleImageUpload = async (files: File[]) => {
     if (files.length === 0) return;
-    
+
     setIsUploading(true);
     try {
       const { urls, errors } = await uploadImages(files);
-      
+
       if (urls.length > 0) {
         setUploadedImages((prev) => [...prev, ...urls]);
         toast.success(`${urls.length} image(s) uploaded successfully`);
       }
-      
+
       if (errors.length > 0) {
         errors.forEach((error) => toast.error(error));
       }
@@ -149,13 +152,15 @@ export default function ReportIssuePage() {
 
     try {
       const token = await getToken();
-      
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/issues`,
+        `${
+          process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+        }/issues`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
@@ -302,7 +307,7 @@ export default function ReportIssuePage() {
                       <MapPin className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   {/* Map Picker */}
                   <MapPicker
                     selectedLocation={locationCoords}
@@ -310,7 +315,9 @@ export default function ReportIssuePage() {
                       setLocationCoords(location);
                       setFormData((prev) => ({
                         ...prev,
-                        location: `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
+                        location: `${location.lat.toFixed(
+                          6
+                        )}, ${location.lng.toFixed(6)}`,
                       }));
                     }}
                     height="250px"
@@ -392,8 +399,8 @@ export default function ReportIssuePage() {
                       Your identity is protected
                     </p>
                     <p className="text-xs text-green-700 dark:text-green-300">
-                      Reports are submitted anonymously. No personal
-                      information is collected or shared with municipalities.
+                      Reports are submitted anonymously. No personal information
+                      is collected or shared with municipalities.
                     </p>
                   </div>
                 </div>

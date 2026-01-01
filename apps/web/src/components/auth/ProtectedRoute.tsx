@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { Loader2, ShieldAlert } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { Loader2, ShieldAlert } from "lucide-react";
 
-type Role = 'user' | 'municipality' | 'admin';
+type Role = "user" | "municipality" | "admin";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,17 +16,17 @@ interface ProtectedRouteProps {
 
 /**
  * ProtectedRoute - Wraps routes that need authentication/authorization
- * 
+ *
  * Usage:
  * - <ProtectedRoute requireAuth>...</ProtectedRoute>  // Any logged in user
  * - <ProtectedRoute allowedRoles={["municipality", "admin"]}>...</ProtectedRoute>  // Only these roles
  * - <ProtectedRoute allowedRoles={["admin"]}>...</ProtectedRoute>  // Admin only
  */
-export function ProtectedRoute({ 
-  children, 
+export function ProtectedRoute({
+  children,
   allowedRoles,
   requireAuth = true,
-  redirectTo = '/auth/login' 
+  redirectTo = "/auth/login",
 }: ProtectedRouteProps) {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
@@ -50,24 +50,24 @@ export function ProtectedRoute({
 
     // Logged in - check role if required
     if (allowedRoles && allowedRoles.length > 0) {
-      const userRole = (userProfile?.role || 'user') as Role;
-      
+      const userRole = (userProfile?.role || "user") as Role;
+
       // Admin has access to everything
-      if (userRole === 'admin' || allowedRoles.includes(userRole)) {
+      if (userRole === "admin" || allowedRoles.includes(userRole)) {
         setIsAuthorized(true);
         setIsChecking(false);
         return;
       }
 
       // User doesn't have required role - redirect based on their actual role
-      if (userRole === 'user') {
-        router.push('/');
-      } else if (userRole === 'municipality') {
-        router.push('/municipality/dashboard');
-      } else if (userRole === 'admin') {
-        router.push('/admin/dashboard');
+      if (userRole === "user") {
+        router.push("/");
+      } else if (userRole === "municipality") {
+        router.push("/municipality/dashboard");
+      } else if (userRole === "admin") {
+        router.push("/admin/dashboard");
       } else {
-        router.push('/');
+        router.push("/");
       }
       setIsChecking(false);
       return;
@@ -76,7 +76,15 @@ export function ProtectedRoute({
     // No specific role required, just auth - user is authorized
     setIsAuthorized(true);
     setIsChecking(false);
-  }, [user, userProfile, loading, allowedRoles, requireAuth, redirectTo, router]);
+  }, [
+    user,
+    userProfile,
+    loading,
+    allowedRoles,
+    requireAuth,
+    redirectTo,
+    router,
+  ]);
 
   // Show loading while checking
   if (loading || isChecking) {
@@ -96,7 +104,9 @@ export function ProtectedRoute({
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <ShieldAlert className="h-12 w-12 text-destructive" />
-          <p className="text-sm text-muted-foreground">Unauthorized. Redirecting...</p>
+          <p className="text-sm text-muted-foreground">
+            Unauthorized. Redirecting...
+          </p>
         </div>
       </div>
     );
@@ -110,26 +120,18 @@ export function ProtectedRoute({
  */
 export function MunicipalityOnly({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute allowedRoles={['municipality', 'admin']}>
+    <ProtectedRoute allowedRoles={["municipality", "admin"]}>
       {children}
     </ProtectedRoute>
   );
 }
 
 export function AdminOnly({ children }: { children: React.ReactNode }) {
-  return (
-    <ProtectedRoute allowedRoles={['admin']}>
-      {children}
-    </ProtectedRoute>
-  );
+  return <ProtectedRoute allowedRoles={["admin"]}>{children}</ProtectedRoute>;
 }
 
 export function AuthenticatedOnly({ children }: { children: React.ReactNode }) {
-  return (
-    <ProtectedRoute requireAuth>
-      {children}
-    </ProtectedRoute>
-  );
+  return <ProtectedRoute requireAuth>{children}</ProtectedRoute>;
 }
 
 export default ProtectedRoute;

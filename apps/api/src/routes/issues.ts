@@ -14,10 +14,10 @@ import {
   requireMunicipality,
   AuthenticatedRequest,
 } from "../middleware/auth";
-import { 
-  findMunicipalityForLocation, 
+import {
+  findMunicipalityForLocation,
   getAdministrativeRegion,
-  classifyIssueWithGemini 
+  classifyIssueWithGemini,
 } from "../services/location";
 import type { Issue, IssueStatus, GeoLocation } from "@techsprint/types";
 
@@ -118,7 +118,10 @@ router.get("/stats", async (_req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("Error fetching global stats:", error?.message || String(error));
+    console.error(
+      "Error fetching global stats:",
+      error?.message || String(error)
+    );
     res.status(500).json({
       success: false,
       data: null,
@@ -213,7 +216,10 @@ router.get("/map/bounds", async (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("Error fetching map issues:", error?.message || String(error));
+    console.error(
+      "Error fetching map issues:",
+      error?.message || String(error)
+    );
     res.status(500).json({
       success: false,
       data: null,
@@ -241,10 +247,12 @@ router.post("/", async (req: Request, res: Response) => {
         const classification = await classifyIssueWithGemini(input.description);
         if (classification && classification.confidence > 0.7) {
           classifiedType = classification.type as any;
-          console.log(`Issue classified as ${classifiedType} with confidence ${classification.confidence}`);
+          console.log(
+            `Issue classified as ${classifiedType} with confidence ${classification.confidence}`
+          );
         }
       } catch (err) {
-        console.warn('Issue classification failed, using default type:', err);
+        console.warn("Issue classification failed, using default type:", err);
       }
     }
 
@@ -254,7 +262,7 @@ router.post("/", async (req: Request, res: Response) => {
       district: "Unknown",
       municipality: "Unknown",
     };
-    
+
     try {
       const adminRegion = await getAdministrativeRegion(latitude, longitude);
       if (adminRegion) {
@@ -266,19 +274,25 @@ router.post("/", async (req: Request, res: Response) => {
         };
       }
     } catch (err) {
-      console.warn('Failed to get administrative region:', err);
+      console.warn("Failed to get administrative region:", err);
     }
 
     // Find the appropriate municipality based on location
     let municipalityId = "MUN-DEFAULT";
     try {
-      const municipalityMatch = await findMunicipalityForLocation(latitude, longitude, db);
+      const municipalityMatch = await findMunicipalityForLocation(
+        latitude,
+        longitude,
+        db
+      );
       if (municipalityMatch) {
         municipalityId = municipalityMatch.municipalityId;
-        console.log(`Issue assigned to municipality ${municipalityMatch.name} (${municipalityMatch.matchType})`);
+        console.log(
+          `Issue assigned to municipality ${municipalityMatch.name} (${municipalityMatch.matchType})`
+        );
       }
     } catch (err) {
-      console.warn('Failed to find municipality for location:', err);
+      console.warn("Failed to find municipality for location:", err);
     }
 
     const location: GeoLocation = {
@@ -287,7 +301,8 @@ router.post("/", async (req: Request, res: Response) => {
     };
 
     // Support both single imageUrl and imageUrls array
-    const imageUrls = req.body.imageUrls || (input.imageUrl ? [input.imageUrl] : []);
+    const imageUrls =
+      req.body.imageUrls || (input.imageUrl ? [input.imageUrl] : []);
 
     const issue: Omit<Issue, "id"> = {
       type: classifiedType,
@@ -363,8 +378,12 @@ router.post(
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { id } = req.params;
-      const { response: responseText, resolutionImageUrl, resolutionNote } = req.body;
-      
+      const {
+        response: responseText,
+        resolutionImageUrl,
+        resolutionNote,
+      } = req.body;
+
       if (!responseText && !resolutionNote) {
         return res.status(400).json({
           success: false,
@@ -377,10 +396,7 @@ router.post(
       const db = getAdminDb();
 
       // Get the issue
-      const issueDoc = await db
-        .collection(COLLECTIONS.ISSUES)
-        .doc(id)
-        .get();
+      const issueDoc = await db.collection(COLLECTIONS.ISSUES).doc(id).get();
 
       if (!issueDoc.exists) {
         return res.status(404).json({
@@ -424,12 +440,18 @@ router.post(
 
       res.json({
         success: true,
-        data: { issueId: id, status: issue.status === "OPEN" ? "RESPONDED" : issue.status },
+        data: {
+          issueId: id,
+          status: issue.status === "OPEN" ? "RESPONDED" : issue.status,
+        },
         error: null,
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("Error responding to issue:", error?.message || String(error));
+      console.error(
+        "Error responding to issue:",
+        error?.message || String(error)
+      );
 
       if (error.name === "ZodError") {
         return res.status(400).json({
@@ -462,8 +484,14 @@ router.patch(
     try {
       const { id } = req.params;
       const { status } = req.body;
-      
-      const validStatuses = ["OPEN", "RESPONDED", "VERIFIED", "RESOLVED", "REJECTED"];
+
+      const validStatuses = [
+        "OPEN",
+        "RESPONDED",
+        "VERIFIED",
+        "RESOLVED",
+        "REJECTED",
+      ];
       if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -476,10 +504,7 @@ router.patch(
       const db = getAdminDb();
 
       // Get the issue
-      const issueDoc = await db
-        .collection(COLLECTIONS.ISSUES)
-        .doc(id)
-        .get();
+      const issueDoc = await db.collection(COLLECTIONS.ISSUES).doc(id).get();
 
       if (!issueDoc.exists) {
         return res.status(404).json({
@@ -515,7 +540,9 @@ router.patch(
 
       // Update municipality stats if resolved
       if (status === "RESOLVED" && issue.municipalityId) {
-        const muniRef = db.collection(COLLECTIONS.MUNICIPALITIES).doc(issue.municipalityId);
+        const muniRef = db
+          .collection(COLLECTIONS.MUNICIPALITIES)
+          .doc(issue.municipalityId);
         const muniDoc = await muniRef.get();
         if (muniDoc.exists) {
           const muniData = muniDoc.data();
@@ -533,7 +560,10 @@ router.patch(
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("Error updating issue status:", error?.message || String(error));
+      console.error(
+        "Error updating issue status:",
+        error?.message || String(error)
+      );
       res.status(500).json({
         success: false,
         data: null,

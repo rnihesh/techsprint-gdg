@@ -1,7 +1,7 @@
 // Firebase Client Configuration for Web App
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { 
-  getAuth, 
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import {
+  getAuth,
   Auth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -13,10 +13,18 @@ import {
   UserCredential,
   sendPasswordResetEmail,
   sendEmailVerification,
-  updateProfile
-} from 'firebase/auth';
-import { getFirestore, Firestore, doc, getDoc, setDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
-import { getStorage, FirebaseStorage } from 'firebase/storage';
+  updateProfile,
+} from "firebase/auth";
+import {
+  getFirestore,
+  Firestore,
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  getDocFromServer,
+} from "firebase/firestore";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -25,7 +33,7 @@ const firebaseConfig = {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
 // Initialize Firebase (singleton pattern)
@@ -44,8 +52,8 @@ export const storage: FirebaseStorage = getStorage(app);
 
 // Auth providers
 const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('email');
-googleProvider.addScope('profile');
+googleProvider.addScope("email");
+googleProvider.addScope("profile");
 
 // User profile type
 export interface UserProfile {
@@ -53,7 +61,7 @@ export interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: 'user' | 'municipality' | 'admin';
+  role: "user" | "municipality" | "admin";
   municipalityId?: string;
   createdAt: Date;
   lastLogin: Date;
@@ -61,11 +69,11 @@ export interface UserProfile {
 
 // Collection names
 export const COLLECTIONS = {
-  ISSUES: 'issues',
-  MUNICIPALITIES: 'municipalities',
-  USERS: 'users',
-  SCORE_HISTORY: 'score_history',
-  VERIFICATIONS: 'verifications'
+  ISSUES: "issues",
+  MUNICIPALITIES: "municipalities",
+  USERS: "users",
+  SCORE_HISTORY: "score_history",
+  VERIFICATIONS: "verifications",
 } as const;
 
 // ========== Auth Functions ==========
@@ -73,8 +81,15 @@ export const COLLECTIONS = {
 /**
  * Sign in with email and password
  */
-export async function signInWithEmail(email: string, password: string): Promise<UserCredential> {
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<UserCredential> {
+  const userCredential = await signInWithEmailAndPassword(
+    auth,
+    email,
+    password
+  );
   // Update last login
   await updateUserLastLogin(userCredential.user.uid);
   return userCredential;
@@ -84,23 +99,27 @@ export async function signInWithEmail(email: string, password: string): Promise<
  * Register with email and password
  */
 export async function registerWithEmail(
-  email: string, 
-  password: string, 
+  email: string,
+  password: string,
   displayName?: string
 ): Promise<UserCredential> {
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  
+  const userCredential = await createUserWithEmailAndPassword(
+    auth,
+    email,
+    password
+  );
+
   // Update display name if provided
   if (displayName) {
     await updateProfile(userCredential.user, { displayName });
   }
-  
+
   // Send email verification
   await sendEmailVerification(userCredential.user);
-  
+
   // Create user profile in Firestore
-  await createUserProfile(userCredential.user, 'user');
-  
+  await createUserProfile(userCredential.user, "user");
+
   return userCredential;
 }
 
@@ -109,16 +128,18 @@ export async function registerWithEmail(
  */
 export async function signInWithGoogle(): Promise<UserCredential> {
   const userCredential = await signInWithPopup(auth, googleProvider);
-  
+
   // Check if user profile exists, if not create one
-  const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, userCredential.user.uid));
-  
+  const userDoc = await getDoc(
+    doc(db, COLLECTIONS.USERS, userCredential.user.uid)
+  );
+
   if (!userDoc.exists()) {
-    await createUserProfile(userCredential.user, 'user');
+    await createUserProfile(userCredential.user, "user");
   } else {
     await updateUserLastLogin(userCredential.user.uid);
   }
-  
+
   return userCredential;
 }
 
@@ -140,19 +161,22 @@ export async function resetPassword(email: string): Promise<void> {
  * Create user profile in Firestore
  */
 async function createUserProfile(
-  user: User, 
-  role: 'user' | 'municipality' | 'admin'
+  user: User,
+  role: "user" | "municipality" | "admin"
 ): Promise<void> {
-  const userProfile: Omit<UserProfile, 'createdAt' | 'lastLogin'> & { createdAt: ReturnType<typeof serverTimestamp>; lastLogin: ReturnType<typeof serverTimestamp> } = {
+  const userProfile: Omit<UserProfile, "createdAt" | "lastLogin"> & {
+    createdAt: ReturnType<typeof serverTimestamp>;
+    lastLogin: ReturnType<typeof serverTimestamp>;
+  } = {
     uid: user.uid,
     email: user.email,
     displayName: user.displayName,
     photoURL: user.photoURL,
     role,
     createdAt: serverTimestamp(),
-    lastLogin: serverTimestamp()
+    lastLogin: serverTimestamp(),
   };
-  
+
   await setDoc(doc(db, COLLECTIONS.USERS, user.uid), userProfile);
 }
 
@@ -160,9 +184,13 @@ async function createUserProfile(
  * Update user's last login timestamp
  */
 async function updateUserLastLogin(uid: string): Promise<void> {
-  await setDoc(doc(db, COLLECTIONS.USERS, uid), {
-    lastLogin: serverTimestamp()
-  }, { merge: true });
+  await setDoc(
+    doc(db, COLLECTIONS.USERS, uid),
+    {
+      lastLogin: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
 
 /**
@@ -172,20 +200,20 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   try {
     // Try to get fresh data from server first
     const userDoc = await getDocFromServer(doc(db, COLLECTIONS.USERS, uid));
-    
+
     if (!userDoc.exists()) {
       return null;
     }
-    
+
     return userDoc.data() as UserProfile;
   } catch {
     // Fall back to cache if offline
     const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, uid));
-    
+
     if (!userDoc.exists()) {
       return null;
     }
-    
+
     return userDoc.data() as UserProfile;
   }
 }
@@ -193,7 +221,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 /**
  * Subscribe to auth state changes
  */
-export function onAuthChange(callback: (user: User | null) => void): () => void {
+export function onAuthChange(
+  callback: (user: User | null) => void
+): () => void {
   return onAuthStateChanged(auth, callback);
 }
 

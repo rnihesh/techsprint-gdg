@@ -160,7 +160,7 @@ function MunicipalityDashboardContent() {
         const issuesResult = await issuesApi.getAll({
           municipalityId: userProfile?.municipalityId || undefined,
         });
-        
+
         if (issuesResult.success && issuesResult.data?.items) {
           // Transform API data to match component structure
           const transformedIssues: DashboardIssue[] = (
@@ -186,14 +186,22 @@ function MunicipalityDashboardContent() {
               : undefined,
           }));
           setIssues(transformedIssues);
-          
+
           // Calculate stats from issues
-          const openCount = transformedIssues.filter(i => i.status === "OPEN").length;
-          const respondedCount = transformedIssues.filter(i => i.status === "RESPONDED").length;
-          const verifiedCount = transformedIssues.filter(i => i.status === "VERIFIED").length;
-          const reviewCount = transformedIssues.filter(i => i.status === "NEEDS_MANUAL_REVIEW").length;
-          
-          setStats(prev => ({
+          const openCount = transformedIssues.filter(
+            (i) => i.status === "OPEN"
+          ).length;
+          const respondedCount = transformedIssues.filter(
+            (i) => i.status === "RESPONDED"
+          ).length;
+          const verifiedCount = transformedIssues.filter(
+            (i) => i.status === "VERIFIED"
+          ).length;
+          const reviewCount = transformedIssues.filter(
+            (i) => i.status === "NEEDS_MANUAL_REVIEW"
+          ).length;
+
+          setStats((prev) => ({
             ...prev,
             totalIssues: transformedIssues.length,
             pending: openCount,
@@ -205,24 +213,28 @@ function MunicipalityDashboardContent() {
 
         // Fetch municipality stats if available
         if (userProfile?.municipalityId) {
-          const municipalityResult = await municipalitiesApi.getById(userProfile.municipalityId);
+          const municipalityResult = await municipalitiesApi.getById(
+            userProfile.municipalityId
+          );
           if (municipalityResult.success && municipalityResult.data) {
             const muni = municipalityResult.data as any;
-            setStats(prev => ({
+            setStats((prev) => ({
               ...prev,
               score: muni.score || 0,
               avgResponseTime: muni.avgResolutionTime || 0,
               municipalityName: muni.name || "",
             }));
           }
-          
+
           // Get rank from leaderboard
           const leaderboardResult = await municipalitiesApi.getLeaderboard();
           if (leaderboardResult.success && leaderboardResult.data?.entries) {
             const entries = leaderboardResult.data.entries as any[];
-            const myEntry = entries.find((e: any) => e.municipality?.id === userProfile.municipalityId);
+            const myEntry = entries.find(
+              (e: any) => e.municipality?.id === userProfile.municipalityId
+            );
             if (myEntry) {
-              setStats(prev => ({
+              setStats((prev) => ({
                 ...prev,
                 rank: myEntry.rank || 0,
               }));
@@ -327,9 +339,7 @@ function MunicipalityDashboardContent() {
                     <p className="text-sm text-muted-foreground">
                       Total Issues
                     </p>
-                    <p className="text-2xl font-bold">
-                      {stats.totalIssues}
-                    </p>
+                    <p className="text-2xl font-bold">{stats.totalIssues}</p>
                   </div>
                   <BarChart3 className="h-8 w-8 text-muted-foreground" />
                 </div>
@@ -412,22 +422,36 @@ function MunicipalityDashboardContent() {
                     <span>Resolution Rate</span>
                     <span className="font-medium">
                       {stats.totalIssues > 0
-                        ? ((stats.resolved / stats.totalIssues) * 100).toFixed(1)
+                        ? ((stats.resolved / stats.totalIssues) * 100).toFixed(
+                            1
+                          )
                         : 0}
                       %
                     </span>
                   </div>
                   <Progress
-                    value={stats.totalIssues > 0 ? (stats.resolved / stats.totalIssues) * 100 : 0}
+                    value={
+                      stats.totalIssues > 0
+                        ? (stats.resolved / stats.totalIssues) * 100
+                        : 0
+                    }
                     className="h-2"
                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Response Time Score</span>
-                    <span className="font-medium">{Math.min(100, Math.max(0, 100 - stats.avgResponseTime))}%</span>
+                    <span className="font-medium">
+                      {Math.min(100, Math.max(0, 100 - stats.avgResponseTime))}%
+                    </span>
                   </div>
-                  <Progress value={Math.min(100, Math.max(0, 100 - stats.avgResponseTime))} className="h-2" />
+                  <Progress
+                    value={Math.min(
+                      100,
+                      Math.max(0, 100 - stats.avgResponseTime)
+                    )}
+                    className="h-2"
+                  />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -464,9 +488,7 @@ function MunicipalityDashboardContent() {
             <CardContent>
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
-                  <TabsTrigger value="open">
-                    Open ({stats.pending})
-                  </TabsTrigger>
+                  <TabsTrigger value="open">Open ({stats.pending})</TabsTrigger>
                   <TabsTrigger value="responded">
                     Responded ({stats.inProgress})
                   </TabsTrigger>

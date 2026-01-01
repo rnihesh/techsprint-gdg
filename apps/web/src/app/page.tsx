@@ -51,6 +51,7 @@ const issueTypes = [
   { value: "STREETLIGHT", label: "Streetlight", icon: Lightbulb },
   { value: "ROAD_DAMAGE", label: "Road Damage", icon: Construction },
   { value: "WATER_SUPPLY", label: "Water Supply", icon: Droplets },
+  { value: "SEWAGE", label: "Sewage", icon: Droplets },
   { value: "ENCROACHMENT", label: "Encroachment", icon: Building },
   { value: "SANITATION", label: "Sanitation", icon: Trash2 },
   { value: "PARKS", label: "Parks & Gardens", icon: TreePine },
@@ -176,9 +177,12 @@ export default function HomePage() {
   };
 
   // Show loading while checking auth for redirects
-  const shouldRedirect = user && userProfile && (userProfile.role === "admin" || userProfile.role === "municipality");
+  const shouldRedirect =
+    user &&
+    userProfile &&
+    (userProfile.role === "admin" || userProfile.role === "municipality");
   const isCheckingAuth = authLoading || (user && !userProfile);
-  
+
   if (isCheckingAuth || shouldRedirect) {
     return (
       <div className="min-h-screen flex flex-col">
@@ -219,12 +223,12 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 {(!user || userProfile?.role === "user") && (
-                <Button size="lg" asChild>
-                  <a href="#report-form">
-                    <Send className="mr-2 h-5 w-5" />
-                    Report an Issue
-                  </a>
-                </Button>
+                  <Button size="lg" asChild>
+                    <a href="#report-form">
+                      <Send className="mr-2 h-5 w-5" />
+                      Report an Issue
+                    </a>
+                  </Button>
                 )}
                 <Button size="lg" variant="outline" asChild>
                   <Link href="/map">
@@ -350,208 +354,215 @@ export default function HomePage() {
 
         {/* Report Form Section - Only visible to users and non-logged-in visitors */}
         {(!user || userProfile?.role === "user") && (
-        <section id="report-form" className="py-16 bg-muted/30">
-          <div className="container px-4">
-            <div className="max-w-2xl mx-auto">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl">
-                    Report a Civic Issue
-                  </CardTitle>
-                  <CardDescription>
-                    Your report will be submitted anonymously. All fields marked
-                    with * are required.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Issue Type */}
-                    <div className="space-y-2">
-                      <Label htmlFor="issueType">Issue Type *</Label>
-                      <Select
-                        value={formData.issueType}
-                        onValueChange={(value) =>
-                          setFormData((prev) => ({ ...prev, issueType: value }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select issue type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {issueTypes.map((type) => {
-                            const Icon = type.icon;
-                            return (
-                              <SelectItem key={type.value} value={type.value}>
-                                <div className="flex items-center gap-2">
-                                  <Icon className="h-4 w-4" />
-                                  {type.label}
-                                </div>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Description */}
-                    <div className="space-y-2">
-                      <Label htmlFor="description">Description *</Label>
-                      <Textarea
-                        id="description"
-                        placeholder="Describe the issue in detail..."
-                        rows={4}
-                        value={formData.description}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            description: e.target.value,
-                          }))
-                        }
-                        required
-                      />
-                    </div>
-
-                    {/* Location */}
-                    <div className="space-y-2">
-                      <Label htmlFor="location">Location *</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="location"
-                          placeholder="Click the pin to detect location"
-                          value={formData.location}
-                          onChange={(e) => {
+          <section id="report-form" className="py-16 bg-muted/30">
+            <div className="container px-4">
+              <div className="max-w-2xl mx-auto">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">
+                      Report a Civic Issue
+                    </CardTitle>
+                    <CardDescription>
+                      Your report will be submitted anonymously. All fields
+                      marked with * are required.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                      {/* Issue Type */}
+                      <div className="space-y-2">
+                        <Label htmlFor="issueType">Issue Type *</Label>
+                        <Select
+                          value={formData.issueType}
+                          onValueChange={(value) =>
                             setFormData((prev) => ({
                               ...prev,
-                              location: e.target.value,
-                            }));
-                            // Try to parse coordinates if manually entered
-                            const coords = e.target.value
-                              .split(",")
-                              .map((s) => parseFloat(s.trim()));
-                            if (
-                              coords.length === 2 &&
-                              !isNaN(coords[0]) &&
-                              !isNaN(coords[1])
-                            ) {
-                              setLocationCoords({
-                                lat: coords[0],
-                                lng: coords[1],
-                              });
-                            }
-                          }}
-                          required
-                          className="flex-1"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={handleGetLocation}
-                        >
-                          <MapPin className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Click the pin button to auto-detect your location
-                      </p>
-                    </div>
-
-                    {/* Image Upload */}
-                    <div className="space-y-2">
-                      <Label>Photos (optional)</Label>
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Camera className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Drag and drop photos here, or click to browse
-                        </p>
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          className="hidden"
-                          id="images"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            setFormData((prev) => ({ ...prev, images: files }));
-                          }}
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-4"
-                          onClick={() =>
-                            document.getElementById("images")?.click()
+                              issueType: value,
+                            }))
                           }
                         >
-                          Upload Photos
-                        </Button>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select issue type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {issueTypes.map((type) => {
+                              const Icon = type.icon;
+                              return (
+                                <SelectItem key={type.value} value={type.value}>
+                                  <div className="flex items-center gap-2">
+                                    <Icon className="h-4 w-4" />
+                                    {type.label}
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
                       </div>
-                      {formData.images.length > 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          {formData.images.length} file(s) selected
-                        </p>
-                      )}
-                    </div>
 
-                    {/* Anonymous Notice */}
-                    <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                      <Shield className="h-5 w-5 text-green-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                          Your identity is protected
-                        </p>
-                        <p className="text-xs text-green-700 dark:text-green-300">
-                          Reports are submitted anonymously. No personal
-                          information is collected or shared.
+                      {/* Description */}
+                      <div className="space-y-2">
+                        <Label htmlFor="description">Description *</Label>
+                        <Textarea
+                          id="description"
+                          placeholder="Describe the issue in detail..."
+                          rows={4}
+                          value={formData.description}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              description: e.target.value,
+                            }))
+                          }
+                          required
+                        />
+                      </div>
+
+                      {/* Location */}
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Location *</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="location"
+                            placeholder="Click the pin to detect location"
+                            value={formData.location}
+                            onChange={(e) => {
+                              setFormData((prev) => ({
+                                ...prev,
+                                location: e.target.value,
+                              }));
+                              // Try to parse coordinates if manually entered
+                              const coords = e.target.value
+                                .split(",")
+                                .map((s) => parseFloat(s.trim()));
+                              if (
+                                coords.length === 2 &&
+                                !isNaN(coords[0]) &&
+                                !isNaN(coords[1])
+                              ) {
+                                setLocationCoords({
+                                  lat: coords[0],
+                                  lng: coords[1],
+                                });
+                              }
+                            }}
+                            required
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleGetLocation}
+                          >
+                            <MapPin className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Click the pin button to auto-detect your location
                         </p>
                       </div>
-                    </div>
 
-                    {/* Submit Button */}
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      size="lg"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>Submitting...</>
-                      ) : (
-                        <>
-                          <Send className="mr-2 h-5 w-5" />
-                          Submit Report
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
+                      {/* Image Upload */}
+                      <div className="space-y-2">
+                        <Label>Photos (optional)</Label>
+                        <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                          <Camera className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Drag and drop photos here, or click to browse
+                          </p>
+                          <Input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            id="images"
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              setFormData((prev) => ({
+                                ...prev,
+                                images: files,
+                              }));
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-4"
+                            onClick={() =>
+                              document.getElementById("images")?.click()
+                            }
+                          >
+                            Upload Photos
+                          </Button>
+                        </div>
+                        {formData.images.length > 0 && (
+                          <p className="text-sm text-muted-foreground">
+                            {formData.images.length} file(s) selected
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Anonymous Notice */}
+                      <div className="flex items-start gap-3 p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                        <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                            Your identity is protected
+                          </p>
+                          <p className="text-xs text-green-700 dark:text-green-300">
+                            Reports are submitted anonymously. No personal
+                            information is collected or shared.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        size="lg"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <>Submitting...</>
+                        ) : (
+                          <>
+                            <Send className="mr-2 h-5 w-5" />
+                            Submit Report
+                          </>
+                        )}
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
         )}
 
         {/* CTA Section - Only for users and non-logged-in visitors */}
         {(!user || userProfile?.role === "user") && (
-        <section className="py-16">
-          <div className="container px-4">
-            <Card className="bg-primary text-primary-foreground">
-              <CardContent className="py-12 text-center">
-                <h2 className="text-3xl font-bold mb-4">
-                  Are you a Municipality Official?
-                </h2>
-                <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                  Register your municipality to respond to complaints,
-                  track performance, and improve your public accountability
-                  score.
-                </p>
-                <Button size="lg" variant="secondary" asChild>
-                  <Link href="/auth/register?type=municipality">Register Municipality</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </section>
+          <section className="py-16">
+            <div className="container px-4">
+              <Card className="bg-primary text-primary-foreground">
+                <CardContent className="py-12 text-center">
+                  <h2 className="text-3xl font-bold mb-4">
+                    Are you a Municipality Official?
+                  </h2>
+                  <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
+                    Register your municipality to respond to complaints, track
+                    performance, and improve your public accountability score.
+                  </p>
+                  <Button size="lg" variant="secondary" asChild>
+                    <Link href="/auth/register?type=municipality">
+                      Register Municipality
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
         )}
       </main>
 
