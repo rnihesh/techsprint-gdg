@@ -21,11 +21,11 @@ import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 // Helper function to redirect based on role
 const getRedirectPath = (role?: string) => {
-  if (role === "admin") {
+  if (role === "PLATFORM_MAINTAINER") {
     return "/admin/dashboard";
   }
-  if (role === "municipality") {
-    return "/municipality/dashboard";
+  if (role === "MUNICIPALITY_USER") {
+    return "/municipality/issues";
   }
   return "/"; // Users go back to home
 };
@@ -195,32 +195,10 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Register Link */}
-            <div className="text-center text-sm">
-              <span className="text-muted-foreground">
-                Don&apos;t have an account?{" "}
-              </span>
-              <Link
-                href="/auth/register"
-                className="text-primary hover:underline font-medium"
-              >
-                Create an account
-              </Link>
-            </div>
-
-            {/* Municipality Registration */}
-            <div className="pt-4 border-t">
-              <div className="text-center text-sm">
-                <span className="text-muted-foreground">
-                  Are you a municipality official?{" "}
-                </span>
-                <Link
-                  href="/auth/register?type=municipality"
-                  className="text-primary hover:underline font-medium"
-                >
-                  Register your municipality
-                </Link>
-              </div>
+            {/* Help text for municipality users */}
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Municipality accounts are provided by the platform.</p>
+              <p>Contact support if you need assistance.</p>
             </div>
           </CardContent>
         </Card>

@@ -12,7 +12,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Settings, LayoutDashboard, Loader2, Shield } from "lucide-react";
+import {
+  User,
+  LogOut,
+  Settings,
+  LayoutDashboard,
+  Loader2,
+  Shield,
+} from "lucide-react";
 import { toast } from "sonner";
 
 export function UserMenu() {
@@ -28,16 +35,7 @@ export function UserMenu() {
   }
 
   if (!user) {
-    return (
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" onClick={() => router.push("/auth/login")}>
-          Sign In
-        </Button>
-        <Button onClick={() => router.push("/auth/register")}>
-          Get Started
-        </Button>
-      </div>
-    );
+    return <Button onClick={() => router.push("/auth/login")}>Sign In</Button>;
   }
 
   const handleSignOut = async () => {
@@ -70,7 +68,10 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={user.photoURL || undefined} alt={user.displayName || "User"} />
+            <AvatarImage
+              src={user.photoURL || undefined}
+              alt={user.displayName || "User"}
+            />
             <AvatarFallback className="bg-primary text-primary-foreground">
               {getInitials()}
             </AvatarFallback>
@@ -94,34 +95,34 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        
-        {userProfile?.role === "admin" && (
+
+        {userProfile?.role === "PLATFORM_MAINTAINER" && (
           <DropdownMenuItem onClick={() => router.push("/admin/dashboard")}>
             <Shield className="mr-2 h-4 w-4 text-destructive" />
             Admin Dashboard
           </DropdownMenuItem>
         )}
-        
-        {userProfile?.role === "municipality" && (
-          <DropdownMenuItem onClick={() => router.push("/municipality/dashboard")}>
+
+        {userProfile?.role === "MUNICIPALITY_USER" && (
+          <DropdownMenuItem onClick={() => router.push("/municipality/issues")}>
             <LayoutDashboard className="mr-2 h-4 w-4" />
-            Municipality Dashboard
+            My Issues
           </DropdownMenuItem>
         )}
-        
+
         <DropdownMenuItem onClick={() => router.push("/profile")}>
           <User className="mr-2 h-4 w-4" />
           Profile
         </DropdownMenuItem>
-        
+
         <DropdownMenuItem onClick={() => router.push("/settings")}>
           <Settings className="mr-2 h-4 w-4" />
           Settings
         </DropdownMenuItem>
-        
+
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem 
+
+        <DropdownMenuItem
           onClick={handleSignOut}
           className="text-red-600 focus:text-red-600"
         >

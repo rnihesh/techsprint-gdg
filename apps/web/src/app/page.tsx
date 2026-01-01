@@ -84,12 +84,12 @@ export default function HomePage() {
   // Redirect municipality/admin users to their dashboards
   useEffect(() => {
     if (!authLoading && user && userProfile) {
-      if (userProfile.role === "admin") {
+      if (userProfile.role === "PLATFORM_MAINTAINER") {
         router.replace("/admin/dashboard");
         return;
       }
-      if (userProfile.role === "municipality") {
-        router.replace("/municipality/dashboard");
+      if (userProfile.role === "MUNICIPALITY_USER") {
+        router.replace("/municipality/issues");
         return;
       }
     }
@@ -180,7 +180,8 @@ export default function HomePage() {
   const shouldRedirect =
     user &&
     userProfile &&
-    (userProfile.role === "admin" || userProfile.role === "municipality");
+    (userProfile.role === "PLATFORM_MAINTAINER" ||
+      userProfile.role === "MUNICIPALITY_USER");
   const isCheckingAuth = authLoading || (user && !userProfile);
 
   if (isCheckingAuth || shouldRedirect) {
@@ -222,7 +223,7 @@ export default function HomePage() {
                 anonymous. Track resolution. Make your city better.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                {(!user || userProfile?.role === "user") && (
+                {(!user || userProfile?.role === "USER") && (
                   <Button size="lg" asChild>
                     <a href="#report-form">
                       <Send className="mr-2 h-5 w-5" />
@@ -353,7 +354,7 @@ export default function HomePage() {
         </section>
 
         {/* Report Form Section - Only visible to users and non-logged-in visitors */}
-        {(!user || userProfile?.role === "user") && (
+        {(!user || userProfile?.role === "USER") && (
           <section id="report-form" className="py-16 bg-muted/30">
             <div className="container px-4">
               <div className="max-w-2xl mx-auto">
@@ -541,23 +542,22 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* CTA Section - Only for users and non-logged-in visitors */}
-        {(!user || userProfile?.role === "user") && (
+        {/* CTA Section - Only for non-logged-in visitors */}
+        {!user && (
           <section className="py-16">
             <div className="container px-4">
               <Card className="bg-primary text-primary-foreground">
                 <CardContent className="py-12 text-center">
                   <h2 className="text-3xl font-bold mb-4">
-                    Are you a Municipality Official?
+                    Municipality Officials
                   </h2>
                   <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                    Register your municipality to respond to complaints, track
-                    performance, and improve your public accountability score.
+                    If you&apos;re a municipality official, login with your
+                    provided credentials to respond to complaints and track
+                    performance.
                   </p>
                   <Button size="lg" variant="secondary" asChild>
-                    <Link href="/auth/register?type=municipality">
-                      Register Municipality
-                    </Link>
+                    <Link href="/auth/login">Municipality Login</Link>
                   </Button>
                 </CardContent>
               </Card>

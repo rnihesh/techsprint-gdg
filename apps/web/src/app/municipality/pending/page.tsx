@@ -3,7 +3,13 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { Clock, MapPin, LogOut, RefreshCw, Loader2 } from "lucide-react";
@@ -19,14 +25,14 @@ export default function PendingApprovalPage() {
         return;
       }
 
-      // If user is approved municipality, redirect to dashboard
-      if (userProfile?.role === "municipality") {
-        router.push("/municipality/dashboard");
+      // If user is approved municipality, redirect to issues
+      if (userProfile?.role === "MUNICIPALITY_USER") {
+        router.push("/municipality/issues");
         return;
       }
 
       // If user is admin, redirect to admin dashboard
-      if (userProfile?.role === "admin") {
+      if (userProfile?.role === "PLATFORM_MAINTAINER") {
         router.push("/admin/dashboard");
         return;
       }
@@ -77,9 +83,12 @@ export default function PendingApprovalPage() {
             <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mb-4">
               <Clock className="h-8 w-8 text-amber-600" />
             </div>
-            <CardTitle className="text-2xl">Registration Pending Approval</CardTitle>
+            <CardTitle className="text-2xl">
+              Registration Pending Approval
+            </CardTitle>
             <CardDescription className="text-base">
-              Your municipality registration has been submitted and is awaiting admin approval.
+              Your municipality registration has been submitted and is awaiting
+              admin approval.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -89,19 +98,23 @@ export default function PendingApprovalPage() {
                 <li>• An admin will review your registration</li>
                 <li>• This typically takes 1-3 business days</li>
                 <li>• You'll receive an email once approved</li>
-                <li>• After approval, you can access the Municipality Dashboard</li>
+                <li>
+                  • After approval, you can access the Municipality Dashboard
+                </li>
               </ul>
             </div>
 
             <div className="flex flex-col gap-3">
-              <Button onClick={handleRefresh} variant="outline" className="w-full">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                className="w-full"
+              >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Check Status
               </Button>
               <Button asChild className="w-full">
-                <Link href="/">
-                  Return to Homepage
-                </Link>
+                <Link href="/">Return to Homepage</Link>
               </Button>
             </div>
 

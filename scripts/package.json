@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "create-admin": "tsx create-admin.ts",
+    "create-municipality-account": "tsx create-municipality-account.ts",
+    "create-all-municipality-accounts": "tsx create-all-municipality-accounts.ts",
+    "list-municipalities": "tsx list-municipalities.ts",
     "seed-municipalities": "tsx seed-municipalities.ts"
   },
   "dependencies": {

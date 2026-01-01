@@ -55,13 +55,13 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope("email");
 googleProvider.addScope("profile");
 
-// User profile type
+// User profile type - matching backend USER_ROLES: ["USER", "MUNICIPALITY_USER", "PLATFORM_MAINTAINER"]
 export interface UserProfile {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: "user" | "municipality" | "admin";
+  role: "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER";
   municipalityId?: string;
   createdAt: Date;
   lastLogin: Date;
@@ -118,7 +118,7 @@ export async function registerWithEmail(
   await sendEmailVerification(userCredential.user);
 
   // Create user profile in Firestore
-  await createUserProfile(userCredential.user, "user");
+  await createUserProfile(userCredential.user, "USER");
 
   return userCredential;
 }
@@ -135,7 +135,7 @@ export async function signInWithGoogle(): Promise<UserCredential> {
   );
 
   if (!userDoc.exists()) {
-    await createUserProfile(userCredential.user, "user");
+    await createUserProfile(userCredential.user, "USER");
   } else {
     await updateUserLastLogin(userCredential.user.uid);
   }
@@ -162,7 +162,7 @@ export async function resetPassword(email: string): Promise<void> {
  */
 async function createUserProfile(
   user: User,
-  role: "user" | "municipality" | "admin"
+  role: "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER"
 ): Promise<void> {
   const userProfile: Omit<UserProfile, "createdAt" | "lastLogin"> & {
     createdAt: ReturnType<typeof serverTimestamp>;

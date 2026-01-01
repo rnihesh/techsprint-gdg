@@ -4,7 +4,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, MapPin, Trophy, Building2, User, LogIn, LogOut, LayoutDashboard, Loader2, Shield, FileText, Users, ClipboardList, AlertCircle } from "lucide-react";
+import {
+  Menu,
+  MapPin,
+  Trophy,
+  Building2,
+  User,
+  LogIn,
+  LogOut,
+  LayoutDashboard,
+  Loader2,
+  Shield,
+  FileText,
+  Users,
+  ClipboardList,
+  AlertCircle,
+} from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
@@ -12,23 +27,21 @@ import { toast } from "sonner";
 
 // Navigation items for different user roles
 const getNavigation = (role: string | undefined) => {
-  if (role === "admin") {
+  if (role === "PLATFORM_MAINTAINER") {
     // Admin: management pages only
     return [
       { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     ];
   }
-  
-  if (role === "municipality") {
-    // Municipality: view issues in their area, no reporting
+
+  if (role === "MUNICIPALITY_USER") {
+    // Municipality: view and solve issues in their area
     return [
-      { name: "Dashboard", href: "/municipality/dashboard", icon: LayoutDashboard },
-      { name: "Issues", href: "/municipality/issues", icon: AlertCircle },
+      { name: "Issues", href: "/municipality/issues", icon: ClipboardList },
       { name: "Map View", href: "/map", icon: MapPin },
-      { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
     ];
   }
-  
+
   // Citizen or not logged in: report issue, map view, leaderboard
   return [
     { name: "Report Issue", href: "/report", icon: FileText },
@@ -42,20 +55,20 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, userProfile, signOut, loading } = useAuth();
   const router = useRouter();
-  
+
   const isLoggedIn = !!user;
   const userRole = userProfile?.role;
-  
+
   // Debug log for role issues
   useEffect(() => {
     if (user && userProfile) {
-      console.log('[Header] User role:', userProfile.role);
+      console.log("[Header] User role:", userProfile.role);
     }
   }, [user, userProfile]);
-  
+
   // If user is logged in but profile not loaded yet, don't show nav (avoid flicker)
   const isProfileLoading = isLoggedIn && !userProfile;
-  
+
   const navigation = useMemo(() => {
     if (isProfileLoading) return []; // Don't show nav while loading profile
     return getNavigation(userRole);
@@ -107,18 +120,9 @@ export function Header() {
           ) : isLoggedIn ? (
             <UserMenu />
           ) : (
-            <div className="flex items-center gap-2">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/auth/login">
-                  Sign In
-                </Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/auth/register">
-                  Get Started
-                </Link>
-              </Button>
-            </div>
+            <Button asChild size="sm">
+              <Link href="/auth/login">Sign In</Link>
+            </Button>
           )}
         </div>
 
@@ -160,32 +164,22 @@ export function Header() {
                     <User className="h-5 w-5" />
                     <span>Profile</span>
                   </Link>
-                  <Button variant="outline" className="w-full" onClick={handleSignOut}>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={handleSignOut}
+                  >
                     <LogOut className="h-4 w-4 mr-2" />
                     Sign Out
                   </Button>
                 </>
               ) : (
-                <>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href="/auth/login" onClick={() => setIsOpen(false)}>
-                      <LogIn className="h-4 w-4 mr-2" />
-                      Sign In
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full">
-                    <Link href="/auth/register" onClick={() => setIsOpen(false)}>
-                      Get Started
-                    </Link>
-                  </Button>
-                  <Link
-                    href="/auth/register?type=municipality"
-                    onClick={() => setIsOpen(false)}
-                    className="text-center text-sm text-primary hover:underline"
-                  >
-                    Register as Municipality
+                <Button asChild variant="outline" className="w-full">
+                  <Link href="/auth/login" onClick={() => setIsOpen(false)}>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign In
                   </Link>
-                </>
+                </Button>
               )}
             </nav>
           </SheetContent>

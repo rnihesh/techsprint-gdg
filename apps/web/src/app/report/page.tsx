@@ -74,11 +74,11 @@ export default function ReportIssuePage() {
   });
 
   // Redirect non-users (municipality and admin should use their dashboards)
-  if (userProfile && userProfile.role !== "user") {
+  if (userProfile && userProfile.role !== "USER") {
     router.replace(
-      userProfile.role === "admin"
+      userProfile.role === "PLATFORM_MAINTAINER"
         ? "/admin/dashboard"
-        : "/municipality/dashboard"
+        : "/municipality/issues"
     );
     return null;
   }

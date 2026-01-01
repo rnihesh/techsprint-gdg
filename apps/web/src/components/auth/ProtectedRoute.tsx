@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldAlert } from "lucide-react";
 
-type Role = "user" | "municipality" | "admin";
+type Role = "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -19,8 +19,8 @@ interface ProtectedRouteProps {
  *
  * Usage:
  * - <ProtectedRoute requireAuth>...</ProtectedRoute>  // Any logged in user
- * - <ProtectedRoute allowedRoles={["municipality", "admin"]}>...</ProtectedRoute>  // Only these roles
- * - <ProtectedRoute allowedRoles={["admin"]}>...</ProtectedRoute>  // Admin only
+ * - <ProtectedRoute allowedRoles={["MUNICIPALITY_USER", "PLATFORM_MAINTAINER"]}>...</ProtectedRoute>  // Only these roles
+ * - <ProtectedRoute allowedRoles={["PLATFORM_MAINTAINER"]}>...</ProtectedRoute>  // Admin only
  */
 export function ProtectedRoute({
   children,
@@ -50,21 +50,24 @@ export function ProtectedRoute({
 
     // Logged in - check role if required
     if (allowedRoles && allowedRoles.length > 0) {
-      const userRole = (userProfile?.role || "user") as Role;
+      const userRole = (userProfile?.role || "USER") as Role;
 
       // Admin has access to everything
-      if (userRole === "admin" || allowedRoles.includes(userRole)) {
+      if (
+        userRole === "PLATFORM_MAINTAINER" ||
+        allowedRoles.includes(userRole)
+      ) {
         setIsAuthorized(true);
         setIsChecking(false);
         return;
       }
 
       // User doesn't have required role - redirect based on their actual role
-      if (userRole === "user") {
+      if (userRole === "USER") {
         router.push("/");
-      } else if (userRole === "municipality") {
-        router.push("/municipality/dashboard");
-      } else if (userRole === "admin") {
+      } else if (userRole === "MUNICIPALITY_USER") {
+        router.push("/municipality/issues");
+      } else if (userRole === "PLATFORM_MAINTAINER") {
         router.push("/admin/dashboard");
       } else {
         router.push("/");
@@ -120,14 +123,18 @@ export function ProtectedRoute({
  */
 export function MunicipalityOnly({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute allowedRoles={["municipality", "admin"]}>
+    <ProtectedRoute allowedRoles={["MUNICIPALITY_USER", "PLATFORM_MAINTAINER"]}>
       {children}
     </ProtectedRoute>
   );
 }
 
 export function AdminOnly({ children }: { children: React.ReactNode }) {
-  return <ProtectedRoute allowedRoles={["admin"]}>{children}</ProtectedRoute>;
+  return (
+    <ProtectedRoute allowedRoles={["PLATFORM_MAINTAINER"]}>
+      {children}
+    </ProtectedRoute>
+  );
 }
 
 export function AuthenticatedOnly({ children }: { children: React.ReactNode }) {

@@ -66,9 +66,9 @@ function ProfileContent() {
 
   const getRoleBadge = () => {
     switch (userProfile?.role) {
-      case "admin":
+      case "PLATFORM_MAINTAINER":
         return <Badge variant="destructive">Platform Admin</Badge>;
-      case "municipality":
+      case "MUNICIPALITY_USER":
         return <Badge className="bg-blue-600">Municipality Official</Badge>;
       default:
         return <Badge variant="secondary">Citizen</Badge>;
@@ -77,9 +77,9 @@ function ProfileContent() {
 
   const getRoleDescription = () => {
     switch (userProfile?.role) {
-      case "admin":
+      case "PLATFORM_MAINTAINER":
         return "You have full administrative access to manage municipalities, users, and platform settings.";
-      case "municipality":
+      case "MUNICIPALITY_USER":
         return "You can view and respond to citizen complaints in your jurisdiction.";
       default:
         return "You can report civic issues and track their resolution status.";
@@ -301,7 +301,7 @@ function ProfileContent() {
                   </div>
                 </div>
 
-                {userProfile?.role === "municipality" && (
+                {userProfile?.role === "MUNICIPALITY_USER" && (
                   <>
                     <Separator />
                     <div className="flex items-center gap-3">
@@ -320,27 +320,6 @@ function ProfileContent() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Role-specific Actions */}
-          {userProfile?.role === "user" && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Become a Municipality Official</CardTitle>
-                <CardDescription>
-                  If you're a government official, you can register your
-                  municipality to respond to public complaints.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button asChild>
-                  <a href="/auth/register?type=municipality">
-                    <Building2 className="h-4 w-4 mr-2" />
-                    Register Municipality
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </main>
 
