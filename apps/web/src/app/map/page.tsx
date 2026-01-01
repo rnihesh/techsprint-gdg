@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { issuesApi } from "@/lib/api";
+import { issuesApi, municipalitiesApi } from "@/lib/api";
 import {
   MapPin,
   Filter,
@@ -62,6 +62,17 @@ interface Issue {
   };
   createdAt: string;
   municipalityId: string;
+}
+
+interface MunicipalityBounds {
+  id: string;
+  name: string;
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
 }
 
 const issueTypes = [
@@ -151,6 +162,43 @@ export default function MapPage() {
     status: "all",
   });
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [municipalities, setMunicipalities] = useState<MunicipalityBounds[]>(
+    []
+  );
+  const [showBorders, setShowBorders] = useState(true);
+
+  // Fetch municipalities with bounds
+  useEffect(() => {
+    const fetchMunicipalities = async () => {
+      try {
+        const result = await municipalitiesApi.getAll({ pageSize: 500 });
+        if (result.success && result.data?.items) {
+          const municipalitiesWithBounds = (
+            result.data.items as Array<{
+              id: string;
+              name: string;
+              bounds?: {
+                north: number;
+                south: number;
+                east: number;
+                west: number;
+              };
+            }>
+          )
+            .filter((m) => m.bounds) // Only include municipalities with bounds
+            .map((m) => ({
+              id: m.id,
+              name: m.name,
+              bounds: m.bounds!,
+            }));
+          setMunicipalities(municipalitiesWithBounds);
+        }
+      } catch (err) {
+        console.error("Error fetching municipalities:", err);
+      }
+    };
+    fetchMunicipalities();
+  }, []);
 
   useEffect(() => {
     const fetchIssues = async () => {
@@ -293,16 +341,25 @@ export default function MapPage() {
                 </div>
               ) : (
                 <>
-                  <GoogleMapComponent issues={filteredIssues} />
+                  <GoogleMapComponent
+                    issues={filteredIssues}
+                    municipalities={municipalities}
+                    showMunicipalityBorders={showBorders}
+                  />
                   {/* Issue count overlay */}
                   <div className="absolute top-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10">
                     <p className="text-sm font-medium">
                       {filteredIssues.length} issues found
                     </p>
+                    {municipalities.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {municipalities.length} municipalities
+                      </p>
+                    )}
                   </div>
                   {/* Legend */}
                   <div className="absolute bottom-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10">
-                    <p className="text-xs font-medium mb-2">Status Legend</p>
+                    <p className="text-xs font-medium mb-2">Legend</p>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs">
                         <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -316,6 +373,18 @@ export default function MapPage() {
                         <div className="w-3 h-3 rounded-full bg-green-500"></div>
                         <span>Verified</span>
                       </div>
+                      <div className="border-t my-2 pt-2">
+                        <div className="flex items-center gap-2 text-xs">
+                          <div className="w-3 h-3 border-2 border-indigo-500 bg-indigo-500/10"></div>
+                          <span>Municipality Border</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowBorders(!showBorders)}
+                        className="text-xs text-primary hover:underline mt-1"
+                      >
+                        {showBorders ? "Hide" : "Show"} borders
+                      </button>
                     </div>
                   </div>
                 </>

@@ -1,40 +1,40 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // ============================================
 // CONSTANTS
 // ============================================
 
 export const ISSUE_TYPES = [
-  'POTHOLE',
-  'GARBAGE',
-  'DRAINAGE',
-  'ROAD_DAMAGE',
-  'STREETLIGHT',
-  'WATER_SUPPLY',
-  'SEWAGE',
-  'ENCROACHMENT',
-  'OTHER'
+  "POTHOLE",
+  "GARBAGE",
+  "DRAINAGE",
+  "ROAD_DAMAGE",
+  "STREETLIGHT",
+  "WATER_SUPPLY",
+  "SEWAGE",
+  "ENCROACHMENT",
+  "OTHER",
 ] as const;
 
 export const ISSUE_STATUS = [
-  'OPEN',
-  'RESPONDED',
-  'VERIFIED',
-  'NEEDS_MANUAL_REVIEW'
+  "OPEN",
+  "RESPONDED",
+  "VERIFIED",
+  "NEEDS_MANUAL_REVIEW",
 ] as const;
 
 export const MUNICIPALITY_TYPES = [
-  'MUNICIPAL_CORPORATION',
-  'MUNICIPALITY',
-  'NAGAR_PANCHAYAT',
-  'GRAM_PANCHAYAT',
-  'CANTONMENT_BOARD'
+  "MUNICIPAL_CORPORATION",
+  "MUNICIPALITY",
+  "NAGAR_PANCHAYAT",
+  "GRAM_PANCHAYAT",
+  "CANTONMENT_BOARD",
 ] as const;
 
 export const USER_ROLES = [
-  'CITIZEN',
-  'MUNICIPALITY_USER',
-  'PLATFORM_MAINTAINER'
+  "CITIZEN",
+  "MUNICIPALITY_USER",
+  "PLATFORM_MAINTAINER",
 ] as const;
 
 // ============================================
@@ -43,12 +43,12 @@ export const USER_ROLES = [
 
 export const geoLocationSchema = z.object({
   latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180)
+  longitude: z.number().min(-180).max(180),
 });
 
 export const geoPointSchema = z.object({
   lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180)
+  lng: z.number().min(-180).max(180),
 });
 
 export const administrativeRegionSchema = z.object({
@@ -56,14 +56,17 @@ export const administrativeRegionSchema = z.object({
   district: z.string().min(1).max(100),
   municipality: z.string().min(1).max(100),
   ward: z.string().max(50).optional(),
-  pincode: z.string().regex(/^\d{6}$/).optional()
+  pincode: z
+    .string()
+    .regex(/^\d{6}$/)
+    .optional(),
 });
 
 export const boundsSchema = z.object({
   north: z.number().min(-90).max(90),
   south: z.number().min(-90).max(90),
   east: z.number().min(-180).max(180),
-  west: z.number().min(-180).max(180)
+  west: z.number().min(-180).max(180),
 });
 
 // ============================================
@@ -79,7 +82,7 @@ export const resolutionMetadataSchema = z.object({
   respondedAt: z.coerce.date(),
   respondedBy: z.string().min(1),
   verificationScore: z.number().min(0).max(1).nullable(),
-  verifiedAt: z.coerce.date().nullable()
+  verifiedAt: z.coerce.date().nullable(),
 });
 
 export const issueSchema = z.object({
@@ -93,24 +96,26 @@ export const issueSchema = z.object({
   status: issueStatusSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
-  resolution: resolutionMetadataSchema.nullable()
+  resolution: resolutionMetadataSchema.nullable(),
 });
 
 export const createIssueInputSchema = z.object({
-  description: z.string()
-    .min(10, 'Description must be at least 10 characters')
-    .max(500, 'Description must be less than 500 characters'),
-  imageUrl: z.string().url('Invalid image URL').optional(),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters")
+    .max(500, "Description must be less than 500 characters"),
+  imageUrl: z.string().url("Invalid image URL").optional(),
   location: geoLocationSchema,
-  type: issueTypeSchema.optional()
+  type: issueTypeSchema.optional(),
 });
 
 export const respondToIssueInputSchema = z.object({
   issueId: z.string().min(1),
-  resolutionImageUrl: z.string().url('Invalid resolution image URL'),
-  resolutionNote: z.string()
-    .min(10, 'Resolution note must be at least 10 characters')
-    .max(1000, 'Resolution note must be less than 1000 characters')
+  resolutionImageUrl: z.string().url("Invalid resolution image URL"),
+  resolutionNote: z
+    .string()
+    .min(10, "Resolution note must be at least 10 characters")
+    .max(1000, "Resolution note must be less than 1000 characters"),
 });
 
 export const issueFiltersSchema = z.object({
@@ -119,7 +124,7 @@ export const issueFiltersSchema = z.object({
   municipalityId: z.string().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
-  bounds: boundsSchema.optional()
+  bounds: boundsSchema.optional(),
 });
 
 // ============================================
@@ -140,30 +145,39 @@ export const municipalitySchema = z.object({
   avgResolutionTime: z.number().min(0).nullable(),
   bounds: boundsSchema,
   createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date()
+  updatedAt: z.coerce.date(),
 });
 
 // Municipality registration request input (pending approval)
 export const municipalityRegistrationSchema = z.object({
   // User details
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
-  email: z.string().email('Invalid email address'),
-  phone: z.string().min(10, 'Phone number must be at least 10 digits').max(15),
-  
+  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").max(15),
+
   // Municipality details
-  municipalityName: z.string().min(3, 'Municipality name must be at least 3 characters').max(200),
+  municipalityName: z
+    .string()
+    .min(3, "Municipality name must be at least 3 characters")
+    .max(200),
   municipalityType: municipalityTypeSchema,
-  state: z.string().min(1, 'State is required').max(100),
-  district: z.string().min(1, 'District is required').max(100),
-  address: z.string().min(10, 'Address must be at least 10 characters').max(500),
+  state: z.string().min(1, "State is required").max(100),
+  district: z.string().min(1, "District is required").max(100),
+  address: z
+    .string()
+    .min(10, "Address must be at least 10 characters")
+    .max(500),
   population: z.number().int().min(0).optional(),
-  
+
   // Location bounds for jurisdiction
   bounds: boundsSchema.optional(),
-  
+
   // Verification
-  registrationNumber: z.string().min(3, 'Registration number is required').max(100),
-  
+  registrationNumber: z
+    .string()
+    .min(3, "Registration number is required")
+    .max(100),
+
   // Note: status and rejectionReason are server-controlled, not in input schema
 });
 
@@ -199,12 +213,12 @@ export const userSchema = z.object({
   displayName: z.string().min(1).max(100),
   isActive: z.boolean(),
   createdAt: z.coerce.date(),
-  lastLoginAt: z.coerce.date().nullable()
+  lastLoginAt: z.coerce.date().nullable(),
 });
 
 export const loginInputSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters')
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 // ============================================
@@ -214,10 +228,12 @@ export const loginInputSchema = z.object({
 export const classificationResultSchema = z.object({
   type: issueTypeSchema,
   confidence: z.number().min(0).max(1),
-  alternatives: z.array(z.object({
-    type: issueTypeSchema,
-    confidence: z.number().min(0).max(1)
-  }))
+  alternatives: z.array(
+    z.object({
+      type: issueTypeSchema,
+      confidence: z.number().min(0).max(1),
+    })
+  ),
 });
 
 export const verificationResultSchema = z.object({
@@ -226,9 +242,9 @@ export const verificationResultSchema = z.object({
   factors: z.object({
     imageSimilarity: z.number().min(0).max(1),
     cleanlinessScore: z.number().min(0).max(1),
-    structuralChange: z.number().min(0).max(1)
+    structuralChange: z.number().min(0).max(1),
   }),
-  explanation: z.string()
+  explanation: z.string(),
 });
 
 // ============================================
@@ -237,7 +253,7 @@ export const verificationResultSchema = z.object({
 
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(20)
+  pageSize: z.coerce.number().int().min(1).max(500).default(20),
 });
 
 // ============================================
@@ -257,7 +273,9 @@ export type RespondToIssueInput = z.infer<typeof respondToIssueInputSchema>;
 export type IssueFilters = z.infer<typeof issueFiltersSchema>;
 export type MunicipalityType = z.infer<typeof municipalityTypeSchema>;
 export type Municipality = z.infer<typeof municipalitySchema>;
-export type MunicipalityRegistration = z.infer<typeof municipalityRegistrationSchema>;
+export type MunicipalityRegistration = z.infer<
+  typeof municipalityRegistrationSchema
+>;
 export type CreateMunicipality = z.infer<typeof createMunicipalitySchema>;
 export type UpdateMunicipality = z.infer<typeof updateMunicipalitySchema>;
 export type UserRole = z.infer<typeof userRoleSchema>;

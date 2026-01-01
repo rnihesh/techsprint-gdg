@@ -72,7 +72,8 @@ export default function MunicipalitiesPage() {
   const fetchMunicipalities = async () => {
     try {
       setLoading(true);
-      const response = await municipalitiesApi.getAll();
+      // Fetch all municipalities (pageSize up to 500 to get all)
+      const response = await municipalitiesApi.getAll({ pageSize: 500 });
       if (response.data?.items) {
         const items = response.data.items as Municipality[];
         setMunicipalities(items);

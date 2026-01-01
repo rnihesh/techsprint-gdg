@@ -6,6 +6,7 @@ import {
   useJsApiLoader,
   Marker,
   InfoWindow,
+  Rectangle,
 } from "@react-google-maps/api";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
@@ -24,8 +25,20 @@ interface Issue {
   municipalityId: string;
 }
 
+interface MunicipalityBounds {
+  id: string;
+  name: string;
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+}
+
 interface GoogleMapComponentProps {
   issues: Issue[];
+  municipalities?: MunicipalityBounds[];
   center?: { lat: number; lng: number };
   zoom?: number;
   onBoundsChange?: (bounds: {
@@ -34,6 +47,7 @@ interface GoogleMapComponentProps {
     east: number;
     west: number;
   }) => void;
+  showMunicipalityBorders?: boolean;
 }
 
 const containerStyle = {
@@ -135,12 +149,17 @@ const getTypeBadge = (type: string) => {
 
 export function GoogleMapComponent({
   issues,
+  municipalities = [],
   center = defaultCenter,
   zoom = 12,
   onBoundsChange,
+  showMunicipalityBorders = true,
 }: GoogleMapComponentProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
+  const [hoveredMunicipality, setHoveredMunicipality] = useState<string | null>(
+    null
+  );
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
@@ -224,6 +243,55 @@ export function GoogleMapComponent({
       onBoundsChanged={handleBoundsChanged}
       options={mapOptions}
     >
+      {/* Municipality border rectangles */}
+      {showMunicipalityBorders &&
+        municipalities.map((municipality) => (
+          <Rectangle
+            key={municipality.id}
+            bounds={{
+              north: municipality.bounds.north,
+              south: municipality.bounds.south,
+              east: municipality.bounds.east,
+              west: municipality.bounds.west,
+            }}
+            options={{
+              strokeColor:
+                hoveredMunicipality === municipality.id ? "#2563EB" : "#6366F1",
+              strokeOpacity: hoveredMunicipality === municipality.id ? 1 : 0.6,
+              strokeWeight: hoveredMunicipality === municipality.id ? 3 : 2,
+              fillColor: "#6366F1",
+              fillOpacity:
+                hoveredMunicipality === municipality.id ? 0.15 : 0.05,
+              clickable: true,
+              zIndex: hoveredMunicipality === municipality.id ? 2 : 1,
+            }}
+            onMouseOver={() => setHoveredMunicipality(municipality.id)}
+            onMouseOut={() => setHoveredMunicipality(null)}
+          />
+        ))}
+
+      {/* Hovered municipality name tooltip */}
+      {hoveredMunicipality &&
+        municipalities.find((m) => m.id === hoveredMunicipality) && (
+          <InfoWindow
+            position={{
+              lat: municipalities.find((m) => m.id === hoveredMunicipality)!
+                .bounds.north,
+              lng:
+                (municipalities.find((m) => m.id === hoveredMunicipality)!
+                  .bounds.east +
+                  municipalities.find((m) => m.id === hoveredMunicipality)!
+                    .bounds.west) /
+                2,
+            }}
+            options={{ disableAutoPan: true }}
+          >
+            <div className="px-2 py-1 font-medium text-sm">
+              {municipalities.find((m) => m.id === hoveredMunicipality)?.name}
+            </div>
+          </InfoWindow>
+        )}
+
       {issues.map((issue) => (
         <Marker
           key={issue.id}
