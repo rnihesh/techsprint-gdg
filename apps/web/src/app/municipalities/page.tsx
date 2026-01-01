@@ -29,18 +29,21 @@ import {
 interface Municipality {
   id: string;
   name: string;
-  region: string;
+  region?: string;
+  district?: string;
   state: string;
   contactEmail?: string;
   contactPhone?: string;
   totalIssues?: number;
   resolvedIssues?: number;
-  status: "active" | "inactive";
+  status?: "active" | "inactive";
 }
 
 export default function MunicipalitiesPage() {
   const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
-  const [filteredMunicipalities, setFilteredMunicipalities] = useState<Municipality[]>([]);
+  const [filteredMunicipalities, setFilteredMunicipalities] = useState<
+    Municipality[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -57,9 +60,10 @@ export default function MunicipalitiesPage() {
       setFilteredMunicipalities(
         municipalities.filter(
           (m) =>
-            m.name.toLowerCase().includes(query) ||
-            m.region.toLowerCase().includes(query) ||
-            m.state.toLowerCase().includes(query)
+            m.name?.toLowerCase().includes(query) ||
+            m.region?.toLowerCase().includes(query) ||
+            m.district?.toLowerCase().includes(query) ||
+            m.state?.toLowerCase().includes(query)
         )
       );
     }
@@ -90,14 +94,15 @@ export default function MunicipalitiesPage() {
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
       <Header />
-      
+
       <main className="flex-1 container py-8 px-4">
         <div className="max-w-6xl mx-auto">
           {/* Page Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Municipalities</h1>
             <p className="text-muted-foreground">
-              Browse registered municipalities and their performance in resolving civic issues.
+              Browse registered municipalities and their performance in
+              resolving civic issues.
             </p>
           </div>
 
@@ -145,7 +150,9 @@ export default function MunicipalitiesPage() {
             <Card className="max-w-md mx-auto">
               <CardContent className="pt-6 text-center">
                 <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Municipalities Found</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  No Municipalities Found
+                </h3>
                 <p className="text-muted-foreground">
                   {searchQuery
                     ? "Try adjusting your search query."
@@ -159,7 +166,10 @@ export default function MunicipalitiesPage() {
           {!loading && !error && filteredMunicipalities.length > 0 && (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredMunicipalities.map((municipality) => (
-                <MunicipalityCard key={municipality.id} municipality={municipality} />
+                <MunicipalityCard
+                  key={municipality.id}
+                  municipality={municipality}
+                />
               ))}
             </div>
           )}
@@ -171,25 +181,34 @@ export default function MunicipalitiesPage() {
                 <CardContent className="pt-6 text-center">
                   <Building2 className="h-8 w-8 text-primary mx-auto mb-2" />
                   <p className="text-2xl font-bold">{municipalities.length}</p>
-                  <p className="text-muted-foreground text-sm">Total Municipalities</p>
+                  <p className="text-muted-foreground text-sm">
+                    Total Municipalities
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6 text-center">
                   <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-2" />
                   <p className="text-2xl font-bold">
-                    {municipalities.filter(m => m.status === "active").length}
+                    {municipalities.filter((m) => m.status === "active").length}
                   </p>
-                  <p className="text-muted-foreground text-sm">Active Municipalities</p>
+                  <p className="text-muted-foreground text-sm">
+                    Active Municipalities
+                  </p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6 text-center">
                   <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
                   <p className="text-2xl font-bold">
-                    {municipalities.reduce((acc, m) => acc + (m.totalIssues || 0), 0)}
+                    {municipalities.reduce(
+                      (acc, m) => acc + (m.totalIssues || 0),
+                      0
+                    )}
                   </p>
-                  <p className="text-muted-foreground text-sm">Total Issues Handled</p>
+                  <p className="text-muted-foreground text-sm">
+                    Total Issues Handled
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -216,16 +235,19 @@ function MunicipalityCard({ municipality }: { municipality: Municipality }) {
             <CardTitle className="text-lg">{municipality.name}</CardTitle>
             <CardDescription className="flex items-center gap-1 mt-1">
               <MapPin className="h-3 w-3" />
-              {municipality.region}, {municipality.state}
+              {municipality.region || municipality.district || ""}
+              {municipality.state ? `, ${municipality.state}` : ""}
             </CardDescription>
           </div>
-          <Badge variant={municipality.status === "active" ? "default" : "secondary"}>
+          <Badge
+            variant={municipality.status === "active" ? "default" : "secondary"}
+          >
             {municipality.status === "active" ? (
               <CheckCircle2 className="h-3 w-3 mr-1" />
             ) : (
               <Clock className="h-3 w-3 mr-1" />
             )}
-            {municipality.status}
+            {municipality.status || "active"}
           </Badge>
         </div>
       </CardHeader>
@@ -235,7 +257,10 @@ function MunicipalityCard({ municipality }: { municipality: Municipality }) {
           {municipality.contactEmail && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Mail className="h-4 w-4" />
-              <a href={`mailto:${municipality.contactEmail}`} className="hover:underline">
+              <a
+                href={`mailto:${municipality.contactEmail}`}
+                className="hover:underline"
+              >
                 {municipality.contactEmail}
               </a>
             </div>
@@ -243,7 +268,10 @@ function MunicipalityCard({ municipality }: { municipality: Municipality }) {
           {municipality.contactPhone && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <Phone className="h-4 w-4" />
-              <a href={`tel:${municipality.contactPhone}`} className="hover:underline">
+              <a
+                href={`tel:${municipality.contactPhone}`}
+                className="hover:underline"
+              >
                 {municipality.contactPhone}
               </a>
             </div>

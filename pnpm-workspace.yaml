@@ -2,7 +2,9 @@ packages:
   - apps/*
   - packages/*
   - services/*
+  - scripts
 
 onlyBuiltDependencies:
+  - "@firebase/util"
   - protobufjs
   - unrs-resolver
