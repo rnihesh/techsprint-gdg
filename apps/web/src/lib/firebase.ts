@@ -53,7 +53,7 @@ export interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: 'citizen' | 'municipality' | 'admin';
+  role: 'user' | 'municipality' | 'admin';
   municipalityId?: string;
   createdAt: Date;
   lastLogin: Date;
@@ -99,7 +99,7 @@ export async function registerWithEmail(
   await sendEmailVerification(userCredential.user);
   
   // Create user profile in Firestore
-  await createUserProfile(userCredential.user, 'citizen');
+  await createUserProfile(userCredential.user, 'user');
   
   return userCredential;
 }
@@ -114,7 +114,7 @@ export async function signInWithGoogle(): Promise<UserCredential> {
   const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, userCredential.user.uid));
   
   if (!userDoc.exists()) {
-    await createUserProfile(userCredential.user, 'citizen');
+    await createUserProfile(userCredential.user, 'user');
   } else {
     await updateUserLastLogin(userCredential.user.uid);
   }
@@ -141,7 +141,7 @@ export async function resetPassword(email: string): Promise<void> {
  */
 async function createUserProfile(
   user: User, 
-  role: 'citizen' | 'municipality' | 'admin'
+  role: 'user' | 'municipality' | 'admin'
 ): Promise<void> {
   const userProfile: Omit<UserProfile, 'createdAt' | 'lastLogin'> & { createdAt: ReturnType<typeof serverTimestamp>; lastLogin: ReturnType<typeof serverTimestamp> } = {
     uid: user.uid,

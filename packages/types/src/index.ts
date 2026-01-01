@@ -149,7 +149,7 @@ export interface MunicipalityStats {
 // ============================================
 
 export const USER_ROLES = [
-  'CITIZEN',
+  'USER',
   'MUNICIPALITY_USER',
   'PLATFORM_MAINTAINER'
 ] as const;

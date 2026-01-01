@@ -27,7 +27,7 @@ const getRedirectPath = (role?: string) => {
   if (role === "municipality") {
     return "/municipality/dashboard";
   }
-  return "/"; // Citizens go back to home
+  return "/"; // Users go back to home
 };
 
 export default function LoginPage() {

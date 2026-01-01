@@ -64,7 +64,7 @@ router.get('/municipalities', async (req: AuthenticatedRequest, res: Response) =
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching municipalities:', error);
+    console.error('Error fetching municipalities:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -100,7 +100,7 @@ router.post('/municipalities', async (req: AuthenticatedRequest, res: Response) 
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error creating municipality:', error);
+    console.error('Error creating municipality:', error?.message || String(error));
     
     if (error.name === 'ZodError') {
       return res.status(400).json({
@@ -153,7 +153,7 @@ router.put('/municipalities/:id', async (req: AuthenticatedRequest, res: Respons
       timestamp: new Date().toISOString()
     });
   } catch (error: any) {
-    console.error('Error updating municipality:', error);
+    console.error('Error updating municipality:', error?.message || String(error));
 
     if (error.name === 'ZodError') {
       return res.status(400).json({
@@ -217,7 +217,7 @@ router.post('/municipalities/:id/regenerate-bounds', async (req: AuthenticatedRe
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error regenerating bounds:', error);
+    console.error('Error regenerating bounds:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -269,7 +269,7 @@ router.delete('/municipalities/:id', async (req: AuthenticatedRequest, res: Resp
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error deleting municipality:', error);
+    console.error('Error deleting municipality:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -327,7 +327,7 @@ router.get('/registrations', async (req: AuthenticatedRequest, res: Response) =>
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching registrations:', error);
+    console.error('Error fetching registrations:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -427,7 +427,7 @@ router.post('/registrations/:id/approve', async (req: AuthenticatedRequest, res:
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error approving registration:', error);
+    console.error('Error approving registration:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -493,7 +493,7 @@ router.post('/registrations/:id/reject', async (req: AuthenticatedRequest, res: 
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error rejecting registration:', error);
+    console.error('Error rejecting registration:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -548,7 +548,7 @@ router.get('/users', async (req: AuthenticatedRequest, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Error fetching users:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -565,7 +565,7 @@ router.put('/users/:id/role', async (req: AuthenticatedRequest, res: Response) =
     const { id } = req.params;
     const { role, municipalityId } = req.body;
 
-    if (!['citizen', 'municipality', 'admin'].includes(role)) {
+    if (!['user', 'municipality', 'admin'].includes(role)) {
       return res.status(400).json({
         success: false,
         data: null,
@@ -609,7 +609,7 @@ router.put('/users/:id/role', async (req: AuthenticatedRequest, res: Response) =
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error updating user role:', error);
+    console.error('Error updating user role:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -665,7 +665,7 @@ router.get('/stats', async (req: AuthenticatedRequest, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching admin stats:', error);
+    console.error('Error fetching admin stats:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,

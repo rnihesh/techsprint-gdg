@@ -263,7 +263,7 @@ function ProfileContent() {
                   <div>
                     <p className="text-sm text-muted-foreground">Role</p>
                     <div className="flex items-center gap-2">
-                      <p className="font-medium capitalize">{userProfile?.role || "citizen"}</p>
+                      <p className="font-medium capitalize">{userProfile?.role || "user"}</p>
                     </div>
                   </div>
                 </div>
@@ -307,12 +307,12 @@ function ProfileContent() {
           </div>
 
           {/* Role-specific Actions */}
-          {userProfile?.role === "citizen" && (
+          {userProfile?.role === "user" && (
             <Card>
               <CardHeader>
                 <CardTitle>Become a Municipality Official</CardTitle>
                 <CardDescription>
-                  If you're a government official, you can register your municipality to respond to citizen complaints.
+                  If you're a government official, you can register your municipality to respond to public complaints.
                 </CardDescription>
               </CardHeader>
               <CardContent>

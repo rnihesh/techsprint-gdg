@@ -38,15 +38,15 @@ export async function authMiddleware(
     const userData = userDoc.exists ? userDoc.data() : null;
 
     // Map role names (Firestore uses lowercase, types may use uppercase)
-    const firestoreRole = userData?.role || 'citizen';
-    let mappedRole: UserRole = 'CITIZEN';
+    const firestoreRole = userData?.role || 'user';
+    let mappedRole: UserRole = 'USER';
     
     if (firestoreRole === 'admin' || firestoreRole === 'PLATFORM_MAINTAINER') {
       mappedRole = 'PLATFORM_MAINTAINER';
     } else if (firestoreRole === 'municipality' || firestoreRole === 'MUNICIPALITY_USER') {
       mappedRole = 'MUNICIPALITY_USER';
     } else {
-      mappedRole = 'CITIZEN';
+      mappedRole = 'USER';
     }
 
     req.user = {

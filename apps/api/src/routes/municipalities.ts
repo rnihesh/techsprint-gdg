@@ -46,7 +46,7 @@ router.get('/leaderboard', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching leaderboard:', error);
+    console.error('Error fetching leaderboard:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -100,7 +100,7 @@ router.get('/', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching municipalities:', error);
+    console.error('Error fetching municipalities:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -139,7 +139,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching municipality:', error);
+    console.error('Error fetching municipality:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -182,7 +182,7 @@ router.get('/:id/stats', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching municipality stats:', error);
+    console.error('Error fetching municipality stats:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -312,7 +312,7 @@ router.post('/register', authMiddleware, async (req: AuthenticatedRequest, res: 
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error submitting registration:', error);
+    console.error('Error submitting registration:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -356,7 +356,7 @@ router.get('/register/status', authMiddleware, async (req: AuthenticatedRequest,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Error fetching registration status:', error);
+    console.error('Error fetching registration status:', error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,

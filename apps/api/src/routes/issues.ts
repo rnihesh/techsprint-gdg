@@ -70,8 +70,8 @@ router.get("/", async (req: Request, res: Response) => {
       error: null,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error("Error fetching issues:", error);
+  } catch (error: any) {
+    console.error("Error fetching issues:", error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -117,8 +117,8 @@ router.get("/stats", async (_req: Request, res: Response) => {
       error: null,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error("Error fetching global stats:", error);
+  } catch (error: any) {
+    console.error("Error fetching global stats:", error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -159,8 +159,8 @@ router.get("/:id", async (req: Request, res: Response) => {
       error: null,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error("Error fetching issue:", error);
+  } catch (error: any) {
+    console.error("Error fetching issue:", error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -212,8 +212,8 @@ router.get("/map/bounds", async (req: Request, res: Response) => {
       error: null,
       timestamp: new Date().toISOString(),
     });
-  } catch (error) {
-    console.error("Error fetching map issues:", error);
+  } catch (error: any) {
+    console.error("Error fetching map issues:", error?.message || String(error));
     res.status(500).json({
       success: false,
       data: null,
@@ -332,7 +332,7 @@ router.post("/", async (req: Request, res: Response) => {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("Error creating issue:", error);
+    console.error("Error creating issue:", error?.message || error);
 
     if (error.name === "ZodError") {
       return res.status(400).json({
@@ -429,7 +429,7 @@ router.post(
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("Error responding to issue:", error);
+      console.error("Error responding to issue:", error?.message || String(error));
 
       if (error.name === "ZodError") {
         return res.status(400).json({
@@ -533,7 +533,7 @@ router.patch(
         timestamp: new Date().toISOString(),
       });
     } catch (error: any) {
-      console.error("Error updating issue status:", error);
+      console.error("Error updating issue status:", error?.message || String(error));
       res.status(500).json({
         success: false,
         data: null,

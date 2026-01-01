@@ -136,7 +136,7 @@ function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // For citizen registration (single step)
+    // For user registration (single step)
     if (!isMunicipalityRegistration) {
       if (formData.password !== formData.confirmPassword) {
         toast.error("Passwords don't match");
@@ -693,7 +693,7 @@ function RegisterForm() {
                   <>
                     <span className="text-muted-foreground">Not a municipality? </span>
                     <Link href="/auth/register" className="text-primary hover:underline font-medium">
-                      Register as citizen
+                      Register as user
                     </Link>
                   </>
                 ) : (

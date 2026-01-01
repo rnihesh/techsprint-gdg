@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { issuesApi } from "@/lib/api";
+import { issuesApi, municipalitiesApi } from "@/lib/api";
 import {
   Building2,
   AlertTriangle,
@@ -44,17 +44,17 @@ import {
   Eye,
 } from "lucide-react";
 
-// Mock data
-const mockStats = {
-  totalIssues: 2100,
-  pending: 380,
-  inProgress: 245,
-  resolved: 1350,
-  rejected: 125,
-  avgResponseTime: 48,
-  score: 82,
-  rank: 4,
-};
+interface DashboardStats {
+  totalIssues: number;
+  pending: number;
+  inProgress: number;
+  resolved: number;
+  rejected: number;
+  avgResponseTime: number;
+  score: number;
+  rank: number;
+  municipalityName: string;
+}
 
 interface DashboardIssue {
   id: string;
@@ -69,54 +69,6 @@ interface DashboardIssue {
     respondedAt: string;
   };
 }
-
-const mockIssues: DashboardIssue[] = [
-  {
-    id: "1",
-    description:
-      "Large pothole on MG Road causing accidents - approximately 2 feet wide has formed. Multiple vehicles have been damaged and it poses a serious safety risk.",
-    type: "POTHOLE",
-    status: "OPEN",
-    location: "MG Road, near Brigade Junction",
-    createdAt: "2024-01-16T10:30:00Z",
-    daysOpen: 2,
-  },
-  {
-    id: "2",
-    description:
-      "Garbage accumulation in residential area - Garbage has not been collected for 5 days. The pile is growing and causing health concerns.",
-    type: "GARBAGE",
-    status: "RESPONDED",
-    location: "4th Block, Koramangala",
-    createdAt: "2024-01-14T08:15:00Z",
-    daysOpen: 4,
-    response: {
-      message:
-        "Cleaning crew has been dispatched. Expected completion by evening.",
-      respondedAt: "2024-01-15T14:00:00Z",
-    },
-  },
-  {
-    id: "3",
-    description:
-      "Broken streetlight creating dark zone - Streetlight has been non-functional for over a week. The area becomes very dark at night.",
-    type: "STREETLIGHT",
-    status: "OPEN",
-    location: "HSR Layout Sector 2",
-    createdAt: "2024-01-12T19:45:00Z",
-    daysOpen: 6,
-  },
-  {
-    id: "4",
-    description:
-      "Drainage overflow during light rain - Storm drains are blocked causing water logging even during light rain. Traffic disruption and property damage.",
-    type: "DRAINAGE",
-    status: "RESPONDED",
-    location: "Silk Board Junction",
-    createdAt: "2024-01-10T16:20:00Z",
-    daysOpen: 8,
-  },
-];
 
 const getStatusBadge = (status: string) => {
   const config: Record<
@@ -187,16 +139,32 @@ function MunicipalityDashboardContent() {
   );
   const [responseText, setResponseText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [issues, setIssues] = useState<DashboardIssue[]>(mockIssues);
+  const [issues, setIssues] = useState<DashboardIssue[]>([]);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalIssues: 0,
+    pending: 0,
+    inProgress: 0,
+    resolved: 0,
+    rejected: 0,
+    avgResponseTime: 0,
+    score: 0,
+    rank: 0,
+    municipalityName: "",
+  });
 
   useEffect(() => {
-    const fetchIssues = async () => {
+    const fetchData = async () => {
+      setIsLoading(true);
       try {
-        const result = await issuesApi.getAll();
-        if (result.success && result.data?.items) {
+        // Fetch issues
+        const issuesResult = await issuesApi.getAll({
+          municipalityId: userProfile?.municipalityId || undefined,
+        });
+        
+        if (issuesResult.success && issuesResult.data?.items) {
           // Transform API data to match component structure
           const transformedIssues: DashboardIssue[] = (
-            result.data.items as any[]
+            issuesResult.data.items as any[]
           ).map((issue) => ({
             id: issue.id,
             description: issue.description,
@@ -217,19 +185,60 @@ function MunicipalityDashboardContent() {
                 }
               : undefined,
           }));
-          if (transformedIssues.length > 0) {
-            setIssues(transformedIssues);
+          setIssues(transformedIssues);
+          
+          // Calculate stats from issues
+          const openCount = transformedIssues.filter(i => i.status === "OPEN").length;
+          const respondedCount = transformedIssues.filter(i => i.status === "RESPONDED").length;
+          const verifiedCount = transformedIssues.filter(i => i.status === "VERIFIED").length;
+          const reviewCount = transformedIssues.filter(i => i.status === "NEEDS_MANUAL_REVIEW").length;
+          
+          setStats(prev => ({
+            ...prev,
+            totalIssues: transformedIssues.length,
+            pending: openCount,
+            inProgress: respondedCount,
+            resolved: verifiedCount,
+            rejected: reviewCount,
+          }));
+        }
+
+        // Fetch municipality stats if available
+        if (userProfile?.municipalityId) {
+          const municipalityResult = await municipalitiesApi.getById(userProfile.municipalityId);
+          if (municipalityResult.success && municipalityResult.data) {
+            const muni = municipalityResult.data as any;
+            setStats(prev => ({
+              ...prev,
+              score: muni.score || 0,
+              avgResponseTime: muni.avgResolutionTime || 0,
+              municipalityName: muni.name || "",
+            }));
+          }
+          
+          // Get rank from leaderboard
+          const leaderboardResult = await municipalitiesApi.getLeaderboard();
+          if (leaderboardResult.success && leaderboardResult.data?.entries) {
+            const entries = leaderboardResult.data.entries as any[];
+            const myEntry = entries.find((e: any) => e.municipality?.id === userProfile.municipalityId);
+            if (myEntry) {
+              setStats(prev => ({
+                ...prev,
+                rank: myEntry.rank || 0,
+              }));
+            }
           }
         }
       } catch (error) {
-        console.error("Error fetching issues:", error);
+        console.error("Error fetching data:", error);
+        toast.error("Failed to load dashboard data");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchIssues();
-  }, []);
+    fetchData();
+  }, [userProfile?.municipalityId]);
 
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
@@ -289,16 +298,18 @@ function MunicipalityDashboardContent() {
                 Municipality Dashboard
               </h1>
               <p className="text-muted-foreground mt-1">
-                Bruhat Bengaluru Mahanagara Palike (BBMP)
+                {stats.municipalityName || "Loading..."}
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <Badge variant="outline" className="px-4 py-2">
-                Rank #{mockStats.rank}
-              </Badge>
+              {stats.rank > 0 && (
+                <Badge variant="outline" className="px-4 py-2">
+                  Rank #{stats.rank}
+                </Badge>
+              )}
               <div className="text-right">
                 <div className="text-2xl font-bold text-primary">
-                  {mockStats.score}%
+                  {stats.score}%
                 </div>
                 <div className="text-sm text-muted-foreground">
                   Performance Score
@@ -317,7 +328,7 @@ function MunicipalityDashboardContent() {
                       Total Issues
                     </p>
                     <p className="text-2xl font-bold">
-                      {mockStats.totalIssues}
+                      {stats.totalIssues}
                     </p>
                   </div>
                   <BarChart3 className="h-8 w-8 text-muted-foreground" />
@@ -332,7 +343,7 @@ function MunicipalityDashboardContent() {
                       Pending
                     </p>
                     <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
-                      {mockStats.pending}
+                      {stats.pending}
                     </p>
                   </div>
                   <Clock className="h-8 w-8 text-yellow-500" />
@@ -347,7 +358,7 @@ function MunicipalityDashboardContent() {
                       In Progress
                     </p>
                     <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                      {mockStats.inProgress}
+                      {stats.inProgress}
                     </p>
                   </div>
                   <TrendingUp className="h-8 w-8 text-blue-500" />
@@ -362,7 +373,7 @@ function MunicipalityDashboardContent() {
                       Resolved
                     </p>
                     <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                      {mockStats.resolved}
+                      {stats.resolved}
                     </p>
                   </div>
                   <CheckCircle className="h-8 w-8 text-green-500" />
@@ -377,7 +388,7 @@ function MunicipalityDashboardContent() {
                       Avg Response
                     </p>
                     <p className="text-2xl font-bold">
-                      {mockStats.avgResponseTime}h
+                      {stats.avgResponseTime}h
                     </p>
                   </div>
                   <Clock className="h-8 w-8 text-muted-foreground" />
@@ -400,31 +411,30 @@ function MunicipalityDashboardContent() {
                   <div className="flex justify-between text-sm">
                     <span>Resolution Rate</span>
                     <span className="font-medium">
-                      {(
-                        (mockStats.resolved / mockStats.totalIssues) *
-                        100
-                      ).toFixed(1)}
+                      {stats.totalIssues > 0
+                        ? ((stats.resolved / stats.totalIssues) * 100).toFixed(1)
+                        : 0}
                       %
                     </span>
                   </div>
                   <Progress
-                    value={(mockStats.resolved / mockStats.totalIssues) * 100}
+                    value={stats.totalIssues > 0 ? (stats.resolved / stats.totalIssues) * 100 : 0}
                     className="h-2"
                   />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Response Time Score</span>
-                    <span className="font-medium">75%</span>
+                    <span className="font-medium">{Math.min(100, Math.max(0, 100 - stats.avgResponseTime))}%</span>
                   </div>
-                  <Progress value={75} className="h-2" />
+                  <Progress value={Math.min(100, Math.max(0, 100 - stats.avgResponseTime))} className="h-2" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Citizen Satisfaction</span>
-                    <span className="font-medium">82%</span>
+                    <span>Overall Score</span>
+                    <span className="font-medium">{stats.score}%</span>
                   </div>
-                  <Progress value={82} className="h-2" />
+                  <Progress value={stats.score} className="h-2" />
                 </div>
               </div>
             </CardContent>
@@ -455,13 +465,13 @@ function MunicipalityDashboardContent() {
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className="mb-4">
                   <TabsTrigger value="open">
-                    Open ({mockStats.pending})
+                    Open ({stats.pending})
                   </TabsTrigger>
                   <TabsTrigger value="responded">
-                    Responded ({mockStats.inProgress})
+                    Responded ({stats.inProgress})
                   </TabsTrigger>
                   <TabsTrigger value="verified">
-                    Verified ({mockStats.resolved})
+                    Verified ({stats.resolved})
                   </TabsTrigger>
                   <TabsTrigger value="all">All</TabsTrigger>
                 </TabsList>

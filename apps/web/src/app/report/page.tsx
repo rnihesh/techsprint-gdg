@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { uploadImages } from "@/lib/cloudinary";
+import { MapPicker } from "@/components/map";
 import {
   MapPin,
   Camera,
@@ -71,8 +72,8 @@ export default function ReportIssuePage() {
     images: [] as File[],
   });
 
-  // Redirect non-citizens
-  if (userProfile && userProfile.role !== "citizen") {
+  // Redirect non-users (municipality and admin should use their dashboards)
+  if (userProfile && userProfile.role !== "user") {
     router.replace(
       userProfile.role === "admin" ? "/admin/dashboard" : "/municipality/dashboard"
     );
@@ -265,10 +266,10 @@ export default function ReportIssuePage() {
                 {/* Location */}
                 <div className="space-y-2">
                   <Label htmlFor="location">Location *</Label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 mb-3">
                     <Input
                       id="location"
-                      placeholder="Click the pin to detect location"
+                      placeholder="Select location on map or enter coordinates"
                       value={formData.location}
                       onChange={(e) => {
                         setFormData((prev) => ({
@@ -296,13 +297,24 @@ export default function ReportIssuePage() {
                       type="button"
                       variant="outline"
                       onClick={handleGetLocation}
+                      title="Auto-detect my location"
                     >
                       <MapPin className="h-4 w-4" />
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Click the pin button to auto-detect your location
-                  </p>
+                  
+                  {/* Map Picker */}
+                  <MapPicker
+                    selectedLocation={locationCoords}
+                    onLocationSelect={(location) => {
+                      setLocationCoords(location);
+                      setFormData((prev) => ({
+                        ...prev,
+                        location: `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
+                      }));
+                    }}
+                    height="250px"
+                  />
                 </div>
 
                 {/* Image Upload */}

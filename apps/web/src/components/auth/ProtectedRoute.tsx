@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2, ShieldAlert } from 'lucide-react';
 
-type Role = 'citizen' | 'municipality' | 'admin';
+type Role = 'user' | 'municipality' | 'admin';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -50,7 +50,7 @@ export function ProtectedRoute({
 
     // Logged in - check role if required
     if (allowedRoles && allowedRoles.length > 0) {
-      const userRole = (userProfile?.role || 'citizen') as Role;
+      const userRole = (userProfile?.role || 'user') as Role;
       
       // Admin has access to everything
       if (userRole === 'admin' || allowedRoles.includes(userRole)) {
@@ -60,7 +60,7 @@ export function ProtectedRoute({
       }
 
       // User doesn't have required role - redirect based on their actual role
-      if (userRole === 'citizen') {
+      if (userRole === 'user') {
         router.push('/');
       } else if (userRole === 'municipality') {
         router.push('/municipality/dashboard');

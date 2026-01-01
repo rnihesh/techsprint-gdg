@@ -204,7 +204,7 @@ export default function HomePage() {
           <div className="container px-4">
             <div className="max-w-3xl mx-auto text-center space-y-6">
               <Badge variant="secondary" className="px-4 py-1">
-                🇮🇳 For Indian Citizens
+                🇮🇳 For Indian Residents
               </Badge>
               <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
                 Report Civic Issues.
@@ -218,7 +218,7 @@ export default function HomePage() {
                 anonymous. Track resolution. Make your city better.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                {(!user || userProfile?.role === "citizen") && (
+                {(!user || userProfile?.role === "user") && (
                 <Button size="lg" asChild>
                   <a href="#report-form">
                     <Send className="mr-2 h-5 w-5" />
@@ -348,8 +348,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Report Form Section - Only visible to citizens and non-logged-in users */}
-        {(!user || userProfile?.role === "citizen") && (
+        {/* Report Form Section - Only visible to users and non-logged-in visitors */}
+        {(!user || userProfile?.role === "user") && (
         <section id="report-form" className="py-16 bg-muted/30">
           <div className="container px-4">
             <div className="max-w-2xl mx-auto">
@@ -531,8 +531,8 @@ export default function HomePage() {
         </section>
         )}
 
-        {/* CTA Section - Only for citizens and non-logged-in users */}
-        {(!user || userProfile?.role === "citizen") && (
+        {/* CTA Section - Only for users and non-logged-in visitors */}
+        {(!user || userProfile?.role === "user") && (
         <section className="py-16">
           <div className="container px-4">
             <Card className="bg-primary text-primary-foreground">
@@ -541,7 +541,7 @@ export default function HomePage() {
                   Are you a Municipality Official?
                 </h2>
                 <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                  Register your municipality to respond to citizen complaints,
+                  Register your municipality to respond to complaints,
                   track performance, and improve your public accountability
                   score.
                 </p>
