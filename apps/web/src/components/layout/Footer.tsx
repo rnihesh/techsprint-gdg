@@ -57,7 +57,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/auth/register" className="hover:text-primary">
+                <Link href="/auth/register?type=municipality" className="hover:text-primary">
                   Register
                 </Link>
               </li>

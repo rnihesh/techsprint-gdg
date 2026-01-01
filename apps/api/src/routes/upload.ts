@@ -1,0 +1,101 @@
+import { Router, Request, Response } from "express";
+import { v2 as cloudinary } from "cloudinary";
+
+const router = Router();
+
+// Configure Cloudinary from environment variables
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "daagyenuq",
+  api_key: process.env.CLOUDINARY_API_KEY || "441869658189185",
+  api_secret: process.env.CLOUDINARY_API_SECRET || "owoHLfzoWn6t6d05Zi24rY54Rq4",
+});
+
+// Generate a signed upload URL
+router.post("/signature", async (_req: Request, res: Response) => {
+  try {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const folder = "civiclemma/issues";
+    
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder,
+      },
+      process.env.CLOUDINARY_API_SECRET || "owoHLfzoWn6t6d05Zi24rY54Rq4"
+    );
+
+    res.json({
+      success: true,
+      data: {
+        signature,
+        timestamp,
+        folder,
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME || "daagyenuq",
+        apiKey: process.env.CLOUDINARY_API_KEY || "441869658189185",
+      },
+      error: null,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error generating Cloudinary signature:", error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: "Failed to generate upload signature",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Get optimized image URL
+router.get("/optimize", (req: Request, res: Response) => {
+  const { url, width, height, quality } = req.query;
+  
+  if (!url || typeof url !== "string") {
+    return res.status(400).json({
+      success: false,
+      data: null,
+      error: "URL is required",
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  try {
+    const transformations: string[] = ["f_auto"];
+    
+    if (quality) transformations.push(`q_${quality}`);
+    if (width) transformations.push(`w_${width}`);
+    if (height) transformations.push(`h_${height}`);
+    
+    // Transform Cloudinary URL
+    if (url.includes("cloudinary.com")) {
+      const parts = url.split("/upload/");
+      if (parts.length === 2) {
+        const optimizedUrl = `${parts[0]}/upload/${transformations.join(",")}/${parts[1]}`;
+        return res.json({
+          success: true,
+          data: { url: optimizedUrl },
+          error: null,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: { url },
+      error: null,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("Error optimizing URL:", error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: "Failed to optimize URL",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+export { router as uploadRoutes };

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { getAdminAuth } from '@techsprint/firebase';
+import { getAdminAuth, getAdminDb, COLLECTIONS } from '@techsprint/firebase';
 import type { UserRole } from '@techsprint/types';
 
 export interface AuthenticatedRequest extends Request {
@@ -32,11 +32,28 @@ export async function authMiddleware(
     const auth = getAdminAuth();
     const decodedToken = await auth.verifyIdToken(token);
 
+    // Get user profile from Firestore to get the actual role
+    const db = getAdminDb();
+    const userDoc = await db.collection(COLLECTIONS.USERS).doc(decodedToken.uid).get();
+    const userData = userDoc.exists ? userDoc.data() : null;
+
+    // Map role names (Firestore uses lowercase, types may use uppercase)
+    const firestoreRole = userData?.role || 'citizen';
+    let mappedRole: UserRole = 'CITIZEN';
+    
+    if (firestoreRole === 'admin' || firestoreRole === 'PLATFORM_MAINTAINER') {
+      mappedRole = 'PLATFORM_MAINTAINER';
+    } else if (firestoreRole === 'municipality' || firestoreRole === 'MUNICIPALITY_USER') {
+      mappedRole = 'MUNICIPALITY_USER';
+    } else {
+      mappedRole = 'CITIZEN';
+    }
+
     req.user = {
       uid: decodedToken.uid,
       email: decodedToken.email || '',
-      role: (decodedToken.role as UserRole) || 'CITIZEN',
-      municipalityId: decodedToken.municipalityId || null
+      role: mappedRole,
+      municipalityId: userData?.municipalityId || null
     };
 
     next();

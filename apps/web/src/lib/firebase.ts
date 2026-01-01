@@ -15,7 +15,7 @@ import {
   sendEmailVerification,
   updateProfile
 } from 'firebase/auth';
-import { getFirestore, Firestore, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, Firestore, doc, getDoc, setDoc, serverTimestamp, getDocFromServer } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
 // Firebase configuration
@@ -166,16 +166,28 @@ async function updateUserLastLogin(uid: string): Promise<void> {
 }
 
 /**
- * Get user profile from Firestore
+ * Get user profile from Firestore (always fetch fresh from server)
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
-  const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, uid));
-  
-  if (!userDoc.exists()) {
-    return null;
+  try {
+    // Try to get fresh data from server first
+    const userDoc = await getDocFromServer(doc(db, COLLECTIONS.USERS, uid));
+    
+    if (!userDoc.exists()) {
+      return null;
+    }
+    
+    return userDoc.data() as UserProfile;
+  } catch {
+    // Fall back to cache if offline
+    const userDoc = await getDoc(doc(db, COLLECTIONS.USERS, uid));
+    
+    if (!userDoc.exists()) {
+      return null;
+    }
+    
+    return userDoc.data() as UserProfile;
   }
-  
-  return userDoc.data() as UserProfile;
 }
 
 /**

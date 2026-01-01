@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, LogOut, Settings, LayoutDashboard, Loader2 } from "lucide-react";
+import { User, LogOut, Settings, LayoutDashboard, Loader2, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 export function UserMenu() {
@@ -94,6 +94,13 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        
+        {userProfile?.role === "admin" && (
+          <DropdownMenuItem onClick={() => router.push("/admin/dashboard")}>
+            <Shield className="mr-2 h-4 w-4 text-destructive" />
+            Admin Dashboard
+          </DropdownMenuItem>
+        )}
         
         {userProfile?.role === "municipality" && (
           <DropdownMenuItem onClick={() => router.push("/municipality/dashboard")}>

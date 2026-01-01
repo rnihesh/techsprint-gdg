@@ -189,6 +189,25 @@ export const municipalitiesApi = {
   getById: (id: string) => api<unknown>(`/municipalities/${id}`),
 
   getStats: (id: string) => api<unknown>(`/municipalities/${id}/stats`),
+
+  // Submit municipality registration request
+  submitRegistration: (data: {
+    name: string;
+    email: string;
+    phone: string;
+    municipalityName: string;
+    municipalityType: string;
+    state: string;
+    district: string;
+    address: string;
+    population?: number;
+    registrationNumber: string;
+  }, token: string) =>
+    api<unknown>("/municipalities/register", {
+      method: "POST",
+      body: data,
+      token,
+    }),
 };
 
 // Auth APIs

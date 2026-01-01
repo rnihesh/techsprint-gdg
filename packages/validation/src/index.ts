@@ -86,7 +86,7 @@ export const issueSchema = z.object({
   id: z.string().min(1),
   type: issueTypeSchema,
   description: z.string().min(10).max(500),
-  imageUrl: z.string().url(),
+  imageUrl: z.string().url().nullable(),
   location: geoLocationSchema,
   region: administrativeRegionSchema,
   municipalityId: z.string().min(1),
@@ -100,7 +100,7 @@ export const createIssueInputSchema = z.object({
   description: z.string()
     .min(10, 'Description must be at least 10 characters')
     .max(500, 'Description must be less than 500 characters'),
-  imageUrl: z.string().url('Invalid image URL'),
+  imageUrl: z.string().url('Invalid image URL').optional(),
   location: geoLocationSchema,
   type: issueTypeSchema.optional()
 });
@@ -141,6 +141,48 @@ export const municipalitySchema = z.object({
   bounds: boundsSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
+});
+
+// Municipality registration request input (pending approval)
+export const municipalityRegistrationSchema = z.object({
+  // User details
+  name: z.string().min(2, 'Name must be at least 2 characters').max(100),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().min(10, 'Phone number must be at least 10 digits').max(15),
+  
+  // Municipality details
+  municipalityName: z.string().min(3, 'Municipality name must be at least 3 characters').max(200),
+  municipalityType: municipalityTypeSchema,
+  state: z.string().min(1, 'State is required').max(100),
+  district: z.string().min(1, 'District is required').max(100),
+  address: z.string().min(10, 'Address must be at least 10 characters').max(500),
+  population: z.number().int().min(0).optional(),
+  
+  // Location bounds for jurisdiction
+  bounds: boundsSchema.optional(),
+  
+  // Verification
+  registrationNumber: z.string().min(3, 'Registration number is required').max(100),
+  
+  // Note: status and rejectionReason are server-controlled, not in input schema
+});
+
+// Create municipality (admin only)
+export const createMunicipalitySchema = z.object({
+  name: z.string().min(3).max(200),
+  type: municipalityTypeSchema,
+  state: z.string().min(1).max(100),
+  district: z.string().min(1).max(100),
+  bounds: boundsSchema,
+});
+
+// Update municipality (admin only)
+export const updateMunicipalitySchema = z.object({
+  name: z.string().min(3).max(200).optional(),
+  type: municipalityTypeSchema.optional(),
+  state: z.string().min(1).max(100).optional(),
+  district: z.string().min(1).max(100).optional(),
+  bounds: boundsSchema.optional(),
 });
 
 // ============================================
@@ -215,6 +257,9 @@ export type RespondToIssueInput = z.infer<typeof respondToIssueInputSchema>;
 export type IssueFilters = z.infer<typeof issueFiltersSchema>;
 export type MunicipalityType = z.infer<typeof municipalityTypeSchema>;
 export type Municipality = z.infer<typeof municipalitySchema>;
+export type MunicipalityRegistration = z.infer<typeof municipalityRegistrationSchema>;
+export type CreateMunicipality = z.infer<typeof createMunicipalitySchema>;
+export type UpdateMunicipality = z.infer<typeof updateMunicipalitySchema>;
 export type UserRole = z.infer<typeof userRoleSchema>;
 export type User = z.infer<typeof userSchema>;
 export type LoginInput = z.infer<typeof loginInputSchema>;

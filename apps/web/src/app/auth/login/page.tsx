@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -19,19 +19,40 @@ import { MapPin, ArrowLeft, Building2, Mail, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
+// Helper function to redirect based on role
+const getRedirectPath = (role?: string) => {
+  if (role === "admin") {
+    return "/admin/dashboard";
+  }
+  if (role === "municipality") {
+    return "/municipality/dashboard";
+  }
+  return "/"; // Citizens go back to home
+};
+
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, user, loading: authLoading } = useAuth();
+  const { signIn, user, userProfile, loading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  // Redirect if already logged in
-  if (user && !authLoading) {
-    router.push("/municipality/dashboard");
-    return null;
+  // Redirect if already logged in - use useEffect to avoid setState during render
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push(getRedirectPath(userProfile?.role));
+    }
+  }, [user, authLoading, userProfile, router]);
+
+  // Show loading while checking auth or redirecting
+  if (authLoading || (user && !authLoading)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
@@ -41,9 +62,9 @@ export default function LoginPage() {
     try {
       await signIn(formData.email, formData.password);
       toast.success("Login successful!", {
-        description: "Redirecting to dashboard...",
+        description: "Welcome back!",
       });
-      router.push("/municipality/dashboard");
+      // Will be redirected by the auth state change
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       toast.error("Login failed", {
@@ -56,9 +77,9 @@ export default function LoginPage() {
 
   const handleGoogleSuccess = () => {
     toast.success("Login successful!", {
-      description: "Redirecting to dashboard...",
+      description: "Welcome back!",
     });
-    router.push("/municipality/dashboard");
+    // Will be redirected by the auth state change
   };
 
   const handleGoogleError = (error: string) => {
@@ -66,14 +87,6 @@ export default function LoginPage() {
       description: error,
     });
   };
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">

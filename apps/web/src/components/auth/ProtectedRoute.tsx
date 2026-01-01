@@ -1,58 +1,135 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
+
+type Role = 'citizen' | 'municipality' | 'admin';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireRole?: 'citizen' | 'municipality' | 'admin';
+  allowedRoles?: Role[];
+  requireAuth?: boolean;
   redirectTo?: string;
 }
 
+/**
+ * ProtectedRoute - Wraps routes that need authentication/authorization
+ * 
+ * Usage:
+ * - <ProtectedRoute requireAuth>...</ProtectedRoute>  // Any logged in user
+ * - <ProtectedRoute allowedRoles={["municipality", "admin"]}>...</ProtectedRoute>  // Only these roles
+ * - <ProtectedRoute allowedRoles={["admin"]}>...</ProtectedRoute>  // Admin only
+ */
 export function ProtectedRoute({ 
   children, 
-  requireRole,
+  allowedRoles,
+  requireAuth = true,
   redirectTo = '/auth/login' 
 }: ProtectedRouteProps) {
   const { user, userProfile, loading } = useAuth();
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push(redirectTo);
-    }
-  }, [user, loading, router, redirectTo]);
+    // Still loading auth state
+    if (loading) return;
 
-  useEffect(() => {
-    if (!loading && user && requireRole && userProfile) {
-      if (userProfile.role !== requireRole && userProfile.role !== 'admin') {
-        router.push('/unauthorized');
+    // Not logged in
+    if (!user) {
+      if (requireAuth) {
+        router.push(redirectTo);
+      } else {
+        setIsAuthorized(true);
       }
+      setIsChecking(false);
+      return;
     }
-  }, [user, userProfile, loading, requireRole, router]);
 
-  if (loading) {
+    // Logged in - check role if required
+    if (allowedRoles && allowedRoles.length > 0) {
+      const userRole = (userProfile?.role || 'citizen') as Role;
+      
+      // Admin has access to everything
+      if (userRole === 'admin' || allowedRoles.includes(userRole)) {
+        setIsAuthorized(true);
+        setIsChecking(false);
+        return;
+      }
+
+      // User doesn't have required role - redirect based on their actual role
+      if (userRole === 'citizen') {
+        router.push('/');
+      } else if (userRole === 'municipality') {
+        router.push('/municipality/dashboard');
+      } else if (userRole === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/');
+      }
+      setIsChecking(false);
+      return;
+    }
+
+    // No specific role required, just auth - user is authorized
+    setIsAuthorized(true);
+    setIsChecking(false);
+  }, [user, userProfile, loading, allowedRoles, requireAuth, redirectTo, router]);
+
+  // Show loading while checking
+  if (loading || isChecking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">Verifying access...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) {
-    return null;
-  }
-
-  if (requireRole && userProfile && userProfile.role !== requireRole && userProfile.role !== 'admin') {
-    return null;
+  // Not authorized - will be redirected
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <ShieldAlert className="h-12 w-12 text-destructive" />
+          <p className="text-sm text-muted-foreground">Unauthorized. Redirecting...</p>
+        </div>
+      </div>
+    );
   }
 
   return <>{children}</>;
+}
+
+/**
+ * Specific role guards as convenience components
+ */
+export function MunicipalityOnly({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute allowedRoles={['municipality', 'admin']}>
+      {children}
+    </ProtectedRoute>
+  );
+}
+
+export function AdminOnly({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute allowedRoles={['admin']}>
+      {children}
+    </ProtectedRoute>
+  );
+}
+
+export function AuthenticatedOnly({ children }: { children: React.ReactNode }) {
+  return (
+    <ProtectedRoute requireAuth>
+      {children}
+    </ProtectedRoute>
+  );
 }
 
 export default ProtectedRoute;

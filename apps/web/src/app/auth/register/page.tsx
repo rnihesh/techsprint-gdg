@@ -26,6 +26,8 @@ import { toast } from "sonner";
 import { MapPin, ArrowLeft, Building2, UserPlus, Loader2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { municipalitiesApi } from "@/lib/api";
+import { auth } from "@/lib/firebase";
 
 const indianStates = [
   "Andhra Pradesh",
@@ -89,16 +91,32 @@ function RegisterForm() {
     documents: null as File | null,
   });
 
-  // Redirect if already logged in
+  // Handle redirects and step management for logged-in users
   useEffect(() => {
-    if (user && !authLoading) {
-      router.push("/municipality/dashboard");
+    if (authLoading) return;
+    
+    if (user) {
+      if (isMunicipalityRegistration) {
+        // User is logged in and wants to register municipality - skip to step 2
+        if (step === 1) {
+          setStep(2);
+          // Populate form with user's data
+          setFormData(prev => ({
+            ...prev,
+            name: user.displayName || prev.name,
+            email: user.email || prev.email,
+          }));
+        }
+      } else {
+        // Regular registration but already logged in - redirect to home
+        router.push("/");
+      }
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, isMunicipalityRegistration, step]);
 
   const handleGoogleSuccess = () => {
     toast.success("Account created!", {
-      description: "Welcome to Nagarik Seva!",
+      description: "Welcome to CivicLemma!",
     });
     
     if (isMunicipalityRegistration) {
@@ -182,13 +200,41 @@ function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // TODO: Submit municipality registration to Firestore
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      toast.success("Registration submitted!", {
-        description:
-          "Your application will be reviewed within 3-5 business days.",
-      });
-      router.push("/municipality/dashboard");
+      // Get the current user's auth token
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        toast.error("Session expired. Please sign in again.");
+        router.push("/auth/login");
+        return;
+      }
+
+      // Submit municipality registration to API
+      const result = await municipalitiesApi.submitRegistration({
+        // User details
+        name: formData.name,
+        email: formData.email,
+        phone: formData.contactPhone,
+        // Municipality details
+        municipalityName: formData.municipalityName,
+        municipalityType: "MUNICIPALITY", // Default type
+        state: formData.state,
+        district: formData.district,
+        address: formData.address,
+        population: formData.population ? parseInt(formData.population, 10) : undefined,
+        // Verification
+        registrationNumber: formData.registrationNumber,
+      }, token);
+
+      if (result.success) {
+        toast.success("Registration submitted!", {
+          description: "Your application will be reviewed within 3-5 business days.",
+        });
+        router.push("/municipality/pending");
+      } else {
+        toast.error("Registration failed", {
+          description: result.error || "Please try again later.",
+        });
+      }
     } catch {
       toast.error("Registration failed", {
         description: "Please try again later.",

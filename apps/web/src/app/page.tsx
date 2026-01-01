@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -63,6 +65,8 @@ interface Stats {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [locationCoords, setLocationCoords] = useState<{
@@ -75,6 +79,20 @@ export default function HomePage() {
     location: "",
     images: [] as File[],
   });
+
+  // Redirect municipality/admin users to their dashboards
+  useEffect(() => {
+    if (!authLoading && user && userProfile) {
+      if (userProfile.role === "admin") {
+        router.replace("/admin/dashboard");
+        return;
+      }
+      if (userProfile.role === "municipality") {
+        router.replace("/municipality/dashboard");
+        return;
+      }
+    }
+  }, [authLoading, user, userProfile, router]);
 
   // Fetch stats on mount
   useEffect(() => {
@@ -157,6 +175,25 @@ export default function HomePage() {
     }
   };
 
+  // Show loading while checking auth for redirects
+  const shouldRedirect = user && userProfile && (userProfile.role === "admin" || userProfile.role === "municipality");
+  const isCheckingAuth = authLoading || (user && !userProfile);
+  
+  if (isCheckingAuth || shouldRedirect) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -181,12 +218,14 @@ export default function HomePage() {
                 anonymous. Track resolution. Make your city better.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                {(!user || userProfile?.role === "citizen") && (
                 <Button size="lg" asChild>
                   <a href="#report-form">
                     <Send className="mr-2 h-5 w-5" />
                     Report an Issue
                   </a>
                 </Button>
+                )}
                 <Button size="lg" variant="outline" asChild>
                   <Link href="/map">
                     <MapPin className="mr-2 h-5 w-5" />
@@ -309,7 +348,8 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Report Form Section */}
+        {/* Report Form Section - Only visible to citizens and non-logged-in users */}
+        {(!user || userProfile?.role === "citizen") && (
         <section id="report-form" className="py-16 bg-muted/30">
           <div className="container px-4">
             <div className="max-w-2xl mx-auto">
@@ -489,8 +529,10 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        )}
 
-        {/* CTA Section */}
+        {/* CTA Section - Only for citizens and non-logged-in users */}
+        {(!user || userProfile?.role === "citizen") && (
         <section className="py-16">
           <div className="container px-4">
             <Card className="bg-primary text-primary-foreground">
@@ -504,12 +546,13 @@ export default function HomePage() {
                   score.
                 </p>
                 <Button size="lg" variant="secondary" asChild>
-                  <Link href="/auth/register">Register Municipality</Link>
+                  <Link href="/auth/register?type=municipality">Register Municipality</Link>
                 </Button>
               </CardContent>
             </Card>
           </div>
         </section>
+        )}
       </main>
 
       <Footer />

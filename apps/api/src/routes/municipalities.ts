@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import type { Router as IRouter } from 'express';
 import { getAdminDb, COLLECTIONS } from '@techsprint/firebase';
-import { paginationSchema } from '@techsprint/validation';
+import { paginationSchema, municipalityRegistrationSchema } from '@techsprint/validation';
 import type { Municipality, MunicipalityStats, LeaderboardEntry } from '@techsprint/types';
+import { authMiddleware, AuthenticatedRequest } from '../middleware/auth';
 
 const router: IRouter = Router();
 
@@ -237,5 +238,132 @@ function calculateMonthlyTrend(issues: any[]): Array<{ month: string; issues: nu
     .slice(-12)
     .map(([month, data]) => ({ month, ...data }));
 }
+
+// ============================================
+// MUNICIPALITY USER REGISTRATION
+// ============================================
+
+// Submit municipality registration request (requires authentication)
+router.post('/register', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const db = getAdminDb();
+    
+    // Validate input
+    const validationResult = municipalityRegistrationSchema.safeParse(req.body);
+    
+    if (!validationResult.success) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: validationResult.error.errors,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const input = validationResult.data;
+
+    // Check if user already has a pending registration
+    const existingReg = await db.collection('municipality_registrations')
+      .where('userId', '==', req.user!.uid)
+      .where('status', '==', 'PENDING')
+      .limit(1)
+      .get();
+
+    if (!existingReg.empty) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: 'You already have a pending registration request',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Check if user is already a municipality user
+    const userDoc = await db.collection(COLLECTIONS.USERS).doc(req.user!.uid).get();
+    if (userDoc.exists && userDoc.data()?.role === 'municipality') {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: 'You are already registered as a municipality user',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const now = new Date();
+    const registrationData = {
+      ...input,
+      userId: req.user!.uid,
+      userEmail: req.user!.email,
+      status: 'PENDING',
+      createdAt: now,
+      updatedAt: now
+    };
+
+    const docRef = await db.collection('municipality_registrations').add(registrationData);
+
+    res.status(201).json({
+      success: true,
+      data: { 
+        id: docRef.id, 
+        status: 'PENDING',
+        message: 'Your registration request has been submitted. You will be notified once it is reviewed.' 
+      },
+      error: null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error submitting registration:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: 'Failed to submit registration',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Check registration status
+router.get('/register/status', authMiddleware, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const db = getAdminDb();
+
+    const snapshot = await db.collection('municipality_registrations')
+      .where('userId', '==', req.user!.uid)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return res.json({
+        success: true,
+        data: null,
+        error: null,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const registration = {
+      id: snapshot.docs[0].id,
+      ...snapshot.docs[0].data(),
+      createdAt: snapshot.docs[0].data().createdAt?.toDate(),
+      updatedAt: snapshot.docs[0].data().updatedAt?.toDate()
+    };
+
+    res.json({
+      success: true,
+      data: registration,
+      error: null,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error fetching registration status:', error);
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: 'Failed to fetch registration status',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
 
 export { router as municipalityRoutes };

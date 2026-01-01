@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Header, Footer } from "@/components/layout";
+import { MunicipalityOnly } from "@/components/auth/ProtectedRoute";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -175,7 +177,8 @@ const getTypeBadge = (type: string) => {
   );
 };
 
-export default function MunicipalityDashboardPage() {
+function MunicipalityDashboardContent() {
+  const { userProfile, getToken } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("open");
   const [searchQuery, setSearchQuery] = useState("");
@@ -631,5 +634,13 @@ export default function MunicipalityDashboardPage() {
 
       <Footer />
     </div>
+  );
+}
+
+export default function MunicipalityDashboardPage() {
+  return (
+    <MunicipalityOnly>
+      <MunicipalityDashboardContent />
+    </MunicipalityOnly>
   );
 }

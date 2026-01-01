@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
+import * as VisuallyHiddenPrimitive from "@radix-ui/react-visually-hidden"
 import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -65,6 +66,10 @@ function DialogContent({
         )}
         {...props}
       >
+        {/* Visually hidden title for accessibility when no DialogTitle is provided */}
+        <VisuallyHiddenPrimitive.Root asChild>
+          <DialogPrimitive.Title>Dialog</DialogPrimitive.Title>
+        </VisuallyHiddenPrimitive.Root>
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close

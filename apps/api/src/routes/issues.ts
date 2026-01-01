@@ -14,6 +14,11 @@ import {
   requireMunicipality,
   AuthenticatedRequest,
 } from "../middleware/auth";
+import { 
+  findMunicipalityForLocation, 
+  getAdministrativeRegion,
+  classifyIssueWithGemini 
+} from "../services/location";
 import type { Issue, IssueStatus, GeoLocation } from "@techsprint/types";
 
 const router: IRouter = Router();
@@ -227,27 +232,70 @@ router.post("/", async (req: Request, res: Response) => {
     const issueId = generateIssueId();
     const now = new Date();
 
-    // TODO: Call ML service to classify issue type
-    const classifiedType = input.type || "OTHER";
+    const { latitude, longitude } = input.location;
 
-    // TODO: Reverse geocode to get municipality
-    const municipalityId = "MUN-DEFAULT"; // Placeholder
+    // Classify issue type using Gemini (if type not provided)
+    let classifiedType = input.type || "OTHER";
+    if (!input.type) {
+      try {
+        const classification = await classifyIssueWithGemini(input.description);
+        if (classification && classification.confidence > 0.7) {
+          classifiedType = classification.type as any;
+          console.log(`Issue classified as ${classifiedType} with confidence ${classification.confidence}`);
+        }
+      } catch (err) {
+        console.warn('Issue classification failed, using default type:', err);
+      }
+    }
+
+    // Get administrative region from coordinates
+    let region = {
+      state: "Unknown",
+      district: "Unknown",
+      municipality: "Unknown",
+    };
+    
+    try {
+      const adminRegion = await getAdministrativeRegion(latitude, longitude);
+      if (adminRegion) {
+        region = {
+          state: adminRegion.state || "Unknown",
+          district: adminRegion.district || "Unknown",
+          municipality: adminRegion.municipality || "Unknown",
+          ...(adminRegion.pincode && { pincode: adminRegion.pincode }),
+        };
+      }
+    } catch (err) {
+      console.warn('Failed to get administrative region:', err);
+    }
+
+    // Find the appropriate municipality based on location
+    let municipalityId = "MUN-DEFAULT";
+    try {
+      const municipalityMatch = await findMunicipalityForLocation(latitude, longitude, db);
+      if (municipalityMatch) {
+        municipalityId = municipalityMatch.municipalityId;
+        console.log(`Issue assigned to municipality ${municipalityMatch.name} (${municipalityMatch.matchType})`);
+      }
+    } catch (err) {
+      console.warn('Failed to find municipality for location:', err);
+    }
 
     const location: GeoLocation = {
-      latitude: input.location.latitude,
-      longitude: input.location.longitude,
+      latitude,
+      longitude,
     };
+
+    // Support both single imageUrl and imageUrls array
+    const imageUrls = req.body.imageUrls || (input.imageUrl ? [input.imageUrl] : []);
 
     const issue: Omit<Issue, "id"> = {
       type: classifiedType,
       description: input.description,
-      imageUrl: input.imageUrl,
+      imageUrl: input.imageUrl || (imageUrls.length > 0 ? imageUrls[0] : null),
+      imageUrls: imageUrls,
       location,
-      region: {
-        state: "Unknown",
-        district: "Unknown",
-        municipality: "Unknown",
-      },
+      region,
       municipalityId,
       status: "OPEN" as IssueStatus,
       createdAt: now,
@@ -314,16 +362,24 @@ router.post(
   requireMunicipality,
   async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const input = respondToIssueInputSchema.parse({
-        ...req.body,
-        issueId: req.params.id,
-      });
+      const { id } = req.params;
+      const { response: responseText, resolutionImageUrl, resolutionNote } = req.body;
+      
+      if (!responseText && !resolutionNote) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "Response text is required",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
       const db = getAdminDb();
 
       // Get the issue
       const issueDoc = await db
         .collection(COLLECTIONS.ISSUES)
-        .doc(input.issueId)
+        .doc(id)
         .get();
 
       if (!issueDoc.exists) {
@@ -347,33 +403,20 @@ router.post(
         });
       }
 
-      // Check if already responded
-      if (issue.status !== "OPEN") {
-        return res.status(400).json({
-          success: false,
-          data: null,
-          error: "Issue already has a response",
-          timestamp: new Date().toISOString(),
-        });
-      }
-
       const now = new Date();
-
-      // TODO: Call ML service to verify resolution
-      // For now, set status to RESPONDED
-      const verificationScore = null; // Will be set by ML service
 
       await db
         .collection(COLLECTIONS.ISSUES)
-        .doc(input.issueId)
+        .doc(id)
         .update({
-          status: "RESPONDED",
+          status: issue.status === "OPEN" ? "RESPONDED" : issue.status,
+          municipalityResponse: responseText || resolutionNote,
           resolution: {
-            resolutionImageUrl: input.resolutionImageUrl,
-            resolutionNote: input.resolutionNote,
+            resolutionImageUrl: resolutionImageUrl || null,
+            resolutionNote: responseText || resolutionNote,
             respondedAt: now,
             respondedBy: req.user?.uid,
-            verificationScore,
+            verificationScore: null,
             verifiedAt: null,
           },
           updatedAt: now,
@@ -381,7 +424,7 @@ router.post(
 
       res.json({
         success: true,
-        data: { issueId: input.issueId, status: "RESPONDED" },
+        data: { issueId: id, status: issue.status === "OPEN" ? "RESPONDED" : issue.status },
         error: null,
         timestamp: new Date().toISOString(),
       });
@@ -403,6 +446,98 @@ router.post(
         success: false,
         data: null,
         error: "Failed to respond to issue",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+);
+
+// Update issue status (municipality user only)
+router.patch(
+  "/:id/status",
+  authMiddleware,
+  requireRole("MUNICIPALITY_USER"),
+  requireMunicipality,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const validStatuses = ["OPEN", "RESPONDED", "VERIFIED", "RESOLVED", "REJECTED"];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "Invalid status. Must be one of: " + validStatuses.join(", "),
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const db = getAdminDb();
+
+      // Get the issue
+      const issueDoc = await db
+        .collection(COLLECTIONS.ISSUES)
+        .doc(id)
+        .get();
+
+      if (!issueDoc.exists) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "Issue not found",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const issue = issueDoc.data() as Issue;
+
+      // Check jurisdiction
+      if (issue.municipalityId !== req.user?.municipalityId) {
+        return res.status(403).json({
+          success: false,
+          data: null,
+          error: "Issue not in your jurisdiction",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const now = new Date();
+
+      await db
+        .collection(COLLECTIONS.ISSUES)
+        .doc(id)
+        .update({
+          status,
+          updatedAt: now,
+          ...(status === "RESOLVED" ? { resolvedAt: now } : {}),
+        });
+
+      // Update municipality stats if resolved
+      if (status === "RESOLVED" && issue.municipalityId) {
+        const muniRef = db.collection(COLLECTIONS.MUNICIPALITIES).doc(issue.municipalityId);
+        const muniDoc = await muniRef.get();
+        if (muniDoc.exists) {
+          const muniData = muniDoc.data();
+          await muniRef.update({
+            resolvedIssues: (muniData?.resolvedIssues || 0) + 1,
+            updatedAt: now,
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: { issueId: id, status },
+        error: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error updating issue status:", error);
+      res.status(500).json({
+        success: false,
+        data: null,
+        error: "Failed to update issue status",
         timestamp: new Date().toISOString(),
       });
     }

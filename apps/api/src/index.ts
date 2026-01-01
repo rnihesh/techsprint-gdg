@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -6,7 +7,9 @@ import morgan from 'morgan';
 import { issueRoutes } from './routes/issues';
 import { municipalityRoutes } from './routes/municipalities';
 import { authRoutes } from './routes/auth';
+import { adminRoutes } from './routes/admin';
 import { healthRoutes } from './routes/health';
+import { uploadRoutes } from './routes/upload';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 
@@ -28,6 +31,8 @@ app.use('/api/health', healthRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/municipalities', municipalityRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Error handling
 app.use(notFoundHandler);

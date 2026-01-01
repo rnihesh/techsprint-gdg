@@ -68,13 +68,16 @@ export interface Issue {
   id: string;
   type: IssueType;
   description: string;
-  imageUrl: string;
+  imageUrl: string | null;
+  imageUrls?: string[];
   location: GeoLocation;
   region: AdministrativeRegion;
   municipalityId: string;
+  municipalityResponse?: string;
   status: IssueStatus;
   createdAt: Date;
   updatedAt: Date;
+  resolvedAt?: Date;
   resolution: ResolutionMetadata | null;
 }
 
