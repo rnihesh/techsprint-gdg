@@ -4,9 +4,10 @@
   "description": "Civic Issue Reporting and Municipal Accountability Platform for India",
   "private": true,
   "scripts": {
-    "dev": "pnpm run --parallel dev",
+    "dev": "concurrently \"pnpm run --parallel --filter './packages/*' dev\" \"pnpm run dev:web\" \"pnpm run dev:api\" \"pnpm run dev:ml\"",
     "dev:web": "pnpm --filter @techsprint/web dev",
     "dev:api": "pnpm --filter @techsprint/api dev",
+    "dev:ml": "source .venv/bin/activate && python3 ml/api_server.py",
     "build": "pnpm run --parallel build",
     "build:web": "pnpm --filter @techsprint/web build",
     "build:api": "pnpm --filter @techsprint/api build",
@@ -27,5 +28,8 @@
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
