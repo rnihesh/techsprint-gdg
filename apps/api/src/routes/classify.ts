@@ -1,7 +1,12 @@
-import { Router, Request, Response } from 'express';
-import { ML_CLASS_TO_ISSUE_TYPE, ISSUE_TYPE_LABELS, IssueType } from '@techsprint/types';
+import { Router, Request, Response } from "express";
+import type { Router as IRouter } from "express";
+import {
+  ML_CLASS_TO_ISSUE_TYPE,
+  ISSUE_TYPE_LABELS,
+  IssueType,
+} from "@techsprint/types";
 
-const router = Router();
+const router: IRouter = Router();
 
 // ML model class names (alphabetically sorted - matches model output order)
 const ML_CLASS_NAMES = [
@@ -17,7 +22,7 @@ const ML_CLASS_NAMES = [
 ];
 
 // Confidence thresholds
-const CONFIDENCE_THRESHOLD = 0.70;
+const CONFIDENCE_THRESHOLD = 0.7;
 const WARNING_THRESHOLD = 0.85;
 
 interface ClassifyRequest {
@@ -37,53 +42,60 @@ interface ClassifyResponse {
 /**
  * POST /api/classify
  * Classify an image to identify municipal issues
- * 
+ *
  * For now, this uses image analysis heuristics.
  * When the TensorFlow model is deployed, this will use the trained model.
  */
-router.post('/', async (req: Request<object, ClassifyResponse, ClassifyRequest>, res: Response<ClassifyResponse>) => {
-  try {
-    const { imageUrl } = req.body;
+router.post(
+  "/",
+  async (
+    req: Request<object, ClassifyResponse, ClassifyRequest>,
+    res: Response<ClassifyResponse>
+  ) => {
+    try {
+      const { imageUrl } = req.body;
 
-    if (!imageUrl) {
-      return res.status(400).json({
+      if (!imageUrl) {
+        return res.status(400).json({
+          success: false,
+          isValid: false,
+          issueType: null,
+          className: null,
+          confidence: 0,
+          message: "Image URL is required",
+        });
+      }
+
+      // TODO: When TensorFlow Serving or TF.js backend is set up, call the model here
+      // For now, return a placeholder that lets the frontend handle classification
+
+      // Attempt to fetch and analyze the image
+      const result = await analyzeImage(imageUrl);
+
+      return res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error("Classification error:", error);
+      return res.status(500).json({
         success: false,
-        isValid: false,
+        isValid: true, // Allow submission even if classification fails
         issueType: null,
         className: null,
         confidence: 0,
-        message: 'Image URL is required',
+        message:
+          "Classification service unavailable. Please select issue type manually.",
       });
     }
-
-    // TODO: When TensorFlow Serving or TF.js backend is set up, call the model here
-    // For now, return a placeholder that lets the frontend handle classification
-    
-    // Attempt to fetch and analyze the image
-    const result = await analyzeImage(imageUrl);
-    
-    return res.json({
-      success: true,
-      ...result,
-    });
-  } catch (error) {
-    console.error('Classification error:', error);
-    return res.status(500).json({
-      success: false,
-      isValid: true, // Allow submission even if classification fails
-      issueType: null,
-      className: null,
-      confidence: 0,
-      message: 'Classification service unavailable. Please select issue type manually.',
-    });
   }
-});
+);
 
 /**
  * GET /api/classify/issue-types
  * Get list of all valid issue types that can be classified
  */
-router.get('/issue-types', (_req: Request, res: Response) => {
+router.get("/issue-types", (_req: Request, res: Response) => {
   const issueTypes = ML_CLASS_NAMES.map((className) => ({
     className,
     issueType: ML_CLASS_TO_ISSUE_TYPE[className],
@@ -101,30 +113,32 @@ router.get('/issue-types', (_req: Request, res: Response) => {
  * Analyze image using basic heuristics
  * This is a placeholder until the TensorFlow model is deployed
  */
-async function analyzeImage(imageUrl: string): Promise<Omit<ClassifyResponse, 'success'>> {
+async function analyzeImage(
+  imageUrl: string
+): Promise<Omit<ClassifyResponse, "success">> {
   try {
     // Fetch image to verify it exists
-    const response = await fetch(imageUrl, { method: 'HEAD' });
-    
+    const response = await fetch(imageUrl, { method: "HEAD" });
+
     if (!response.ok) {
       return {
         isValid: false,
         issueType: null,
         className: null,
         confidence: 0,
-        message: 'Could not access the image. Please try uploading again.',
+        message: "Could not access the image. Please try uploading again.",
       };
     }
 
     // Check content type
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.startsWith('image/')) {
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.startsWith("image/")) {
       return {
         isValid: false,
         issueType: null,
         className: null,
         confidence: 0,
-        message: 'The uploaded file is not a valid image.',
+        message: "The uploaded file is not a valid image.",
       };
     }
 
@@ -135,16 +149,17 @@ async function analyzeImage(imageUrl: string): Promise<Omit<ClassifyResponse, 's
       issueType: null,
       className: null,
       confidence: 0.5,
-      message: 'Image uploaded successfully. Please select or confirm the issue type.',
+      message:
+        "Image uploaded successfully. Please select or confirm the issue type.",
     };
   } catch (error) {
-    console.error('Image analysis error:', error);
+    console.error("Image analysis error:", error);
     return {
       isValid: true,
       issueType: null,
       className: null,
       confidence: 0,
-      message: 'Could not analyze image. Please select issue type manually.',
+      message: "Could not analyze image. Please select issue type manually.",
     };
   }
 }

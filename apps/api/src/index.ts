@@ -1,40 +1,43 @@
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import morgan from 'morgan';
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
 
-import { issueRoutes } from './routes/issues';
-import { municipalityRoutes } from './routes/municipalities';
-import { authRoutes } from './routes/auth';
-import { adminRoutes } from './routes/admin';
-import { healthRoutes } from './routes/health';
-import { uploadRoutes } from './routes/upload';
-import { classifyRoutes } from './routes/classify';
-import { errorHandler } from './middleware/errorHandler';
-import { notFoundHandler } from './middleware/notFoundHandler';
+import { issueRoutes } from "./routes/issues";
+import { municipalityRoutes } from "./routes/municipalities";
+import { authRoutes } from "./routes/auth";
+import { adminRoutes } from "./routes/admin";
+import { healthRoutes } from "./routes/health";
+import { uploadRoutes } from "./routes/upload";
+import { classifyRoutes } from "./routes/classify";
+import { errorHandler } from "./middleware/errorHandler";
+import { notFoundHandler } from "./middleware/notFoundHandler";
+import type { Express } from "express";
 
-const app = express();
+const app: Express = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(helmet());
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
-  credentials: true
-}));
-app.use(morgan('combined'));
-app.use(express.json({ limit: '10mb' }));
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    credentials: true,
+  })
+);
+app.use(morgan("combined"));
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/health', healthRoutes);
-app.use('/api/issues', issueRoutes);
-app.use('/api/municipalities', municipalityRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/classify', classifyRoutes);
+app.use("/api/health", healthRoutes);
+app.use("/api/issues", issueRoutes);
+app.use("/api/municipalities", municipalityRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/upload", uploadRoutes);
+app.use("/api/classify", classifyRoutes);
 
 // Error handling
 app.use(notFoundHandler);

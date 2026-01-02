@@ -1,13 +1,15 @@
 import { Router, Request, Response } from "express";
+import type { Router as IRouter } from "express";
 import { v2 as cloudinary } from "cloudinary";
 
-const router = Router();
+const router: IRouter = Router();
 
 // Configure Cloudinary from environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "daagyenuq",
   api_key: process.env.CLOUDINARY_API_KEY || "441869658189185",
-  api_secret: process.env.CLOUDINARY_API_SECRET || "owoHLfzoWn6t6d05Zi24rY54Rq4",
+  api_secret:
+    process.env.CLOUDINARY_API_SECRET || "owoHLfzoWn6t6d05Zi24rY54Rq4",
 });
 
 // Generate a signed upload URL
@@ -15,7 +17,7 @@ router.post("/signature", async (_req: Request, res: Response) => {
   try {
     const timestamp = Math.round(new Date().getTime() / 1000);
     const folder = "civiclemma/issues";
-    
+
     const signature = cloudinary.utils.api_sign_request(
       {
         timestamp,
@@ -50,7 +52,7 @@ router.post("/signature", async (_req: Request, res: Response) => {
 // Get optimized image URL
 router.get("/optimize", (req: Request, res: Response) => {
   const { url, width, height, quality } = req.query;
-  
+
   if (!url || typeof url !== "string") {
     return res.status(400).json({
       success: false,
@@ -62,16 +64,18 @@ router.get("/optimize", (req: Request, res: Response) => {
 
   try {
     const transformations: string[] = ["f_auto"];
-    
+
     if (quality) transformations.push(`q_${quality}`);
     if (width) transformations.push(`w_${width}`);
     if (height) transformations.push(`h_${height}`);
-    
+
     // Transform Cloudinary URL
     if (url.includes("cloudinary.com")) {
       const parts = url.split("/upload/");
       if (parts.length === 2) {
-        const optimizedUrl = `${parts[0]}/upload/${transformations.join(",")}/${parts[1]}`;
+        const optimizedUrl = `${parts[0]}/upload/${transformations.join(",")}/${
+          parts[1]
+        }`;
         return res.json({
           success: true,
           data: { url: optimizedUrl },
@@ -80,7 +84,7 @@ router.get("/optimize", (req: Request, res: Response) => {
         });
       }
     }
-    
+
     res.json({
       success: true,
       data: { url },
