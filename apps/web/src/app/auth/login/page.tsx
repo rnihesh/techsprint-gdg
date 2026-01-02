@@ -32,7 +32,13 @@ const getRedirectPath = (role?: string) => {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, user, userProfile, loading: authLoading, profileLoading } = useAuth();
+  const {
+    signIn,
+    user,
+    userProfile,
+    loading: authLoading,
+    profileLoading,
+  } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -42,7 +48,7 @@ export default function LoginPage() {
   // Redirect if already logged in - wait for profile to load before redirecting
   useEffect(() => {
     if (user && !authLoading && !profileLoading && userProfile) {
-      router.push(getRedirectPath(userProfile.role));
+      router.push(getRedirectPath(userProfile.role ?? undefined));
     }
   }, [user, authLoading, profileLoading, userProfile, router]);
 

@@ -73,7 +73,7 @@ export function Header() {
 
   const navigation = useMemo(() => {
     if (isProfileLoading) return []; // Don't show nav while loading profile
-    return getNavigation(userRole);
+    return getNavigation(userRole ?? undefined);
   }, [userRole, isProfileLoading]);
 
   const handleSignOut = async () => {
