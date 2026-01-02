@@ -5,9 +5,11 @@ After=network.target
 [Service]
 Type=simple
 User=poonih
-WorkingDirectory=/home/poonih/venom69/apps/ml
+WorkingDirectory=/home/poonih/techsprint-gdg/ml
 ExecStart=/home/poonih/techsprint-gdg/.venv/bin/python api_server.py
 Restart=always
+Environment=PYTHONUNBUFFERED=1
+Environment=ML_API_PORT=3502
 
 [Install]
 WantedBy=multi-user.target

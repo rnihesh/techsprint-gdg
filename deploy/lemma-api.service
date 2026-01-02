@@ -9,6 +9,8 @@ WorkingDirectory=/home/poonih/techsprint-gdg/apps/api
 ExecStart=/home/poonih/.nvm/versions/node/v24.12.0/bin/node dist/index.js
 Restart=always
 Environment=NODE_ENV=production
+Environment=PORT=3501
+Environment=NODE_PATH=/home/poonih/techsprint-gdg/node_modules:/home/poonih/techsprint-gdg/packages/firebase/node_modules
 
 [Install]
 WantedBy=multi-user.target
