@@ -5,23 +5,18 @@ import { z } from "zod";
 // ============================================
 
 export const ISSUE_TYPES = [
-  "POTHOLE",
-  "GARBAGE",
-  "DRAINAGE",
-  "ROAD_DAMAGE",
-  "STREETLIGHT",
-  "WATER_SUPPLY",
-  "SEWAGE",
-  "ENCROACHMENT",
-  "OTHER",
+  "POTHOLE", // Potholes and Road Damage
+  "GARBAGE", // Littering/Garbage on Public Places
+  "ILLEGAL_PARKING", // Illegal Parking Issues
+  "DAMAGED_SIGN", // Broken Road Sign Issues
+  "FALLEN_TREE", // Fallen trees
+  "VANDALISM", // Vandalism Issues (Graffiti)
+  "DEAD_ANIMAL", // Dead Animal Pollution
+  "DAMAGED_CONCRETE", // Damaged concrete structures
+  "DAMAGED_ELECTRICAL", // Damaged Electric wires and poles
 ] as const;
 
-export const ISSUE_STATUS = [
-  "OPEN",
-  "RESPONDED",
-  "VERIFIED",
-  "NEEDS_MANUAL_REVIEW",
-] as const;
+export const ISSUE_STATUS = ["OPEN", "CLOSED"] as const;
 
 export const MUNICIPALITY_TYPES = [
   "MUNICIPAL_CORPORATION",

@@ -82,13 +82,9 @@ const mapOptions: google.maps.MapOptions = {
 const getMarkerColor = (status: string): string => {
   switch (status) {
     case "OPEN":
-      return "#EAB308"; // yellow
-    case "RESPONDED":
-      return "#3B82F6"; // blue
-    case "VERIFIED":
+      return "#EF4444"; // red
+    case "CLOSED":
       return "#22C55E"; // green
-    case "NEEDS_MANUAL_REVIEW":
-      return "#F97316"; // orange
     default:
       return "#6B7280"; // gray
   }
@@ -97,10 +93,8 @@ const getMarkerColor = (status: string): string => {
 const getStatusIcon = (status: string) => {
   switch (status) {
     case "OPEN":
-      return <Clock className="h-4 w-4 text-yellow-500" />;
-    case "RESPONDED":
-      return <AlertTriangle className="h-4 w-4 text-blue-500" />;
-    case "VERIFIED":
+      return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    case "CLOSED":
       return <CheckCircle className="h-4 w-4 text-green-500" />;
     default:
       return <Clock className="h-4 w-4 text-gray-500" />;
@@ -112,16 +106,12 @@ const getStatusBadge = (status: string) => {
     string,
     "default" | "secondary" | "destructive" | "outline"
   > = {
-    OPEN: "secondary",
-    RESPONDED: "outline",
-    VERIFIED: "default",
-    NEEDS_MANUAL_REVIEW: "destructive",
+    OPEN: "destructive",
+    CLOSED: "default",
   };
   const labels: Record<string, string> = {
     OPEN: "Open",
-    RESPONDED: "Responded",
-    VERIFIED: "Verified",
-    NEEDS_MANUAL_REVIEW: "Under Review",
+    CLOSED: "Closed",
   };
   return (
     <Badge variant={variants[status] || "secondary"}>

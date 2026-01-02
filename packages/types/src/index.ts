@@ -3,14 +3,14 @@
 // ============================================
 
 export const ISSUE_TYPES = [
-  "POTHOLE",           // Potholes and Road Damage
-  "GARBAGE",           // Littering/Garbage on Public Places
-  "ILLEGAL_PARKING",   // Illegal Parking Issues
-  "DAMAGED_SIGN",      // Broken Road Sign Issues
-  "FALLEN_TREE",       // Fallen trees
-  "VANDALISM",         // Vandalism Issues (Graffiti)
-  "DEAD_ANIMAL",       // Dead Animal Pollution
-  "DAMAGED_CONCRETE",  // Damaged concrete structures
+  "POTHOLE", // Potholes and Road Damage
+  "GARBAGE", // Littering/Garbage on Public Places
+  "ILLEGAL_PARKING", // Illegal Parking Issues
+  "DAMAGED_SIGN", // Broken Road Sign Issues
+  "FALLEN_TREE", // Fallen trees
+  "VANDALISM", // Vandalism Issues (Graffiti)
+  "DEAD_ANIMAL", // Dead Animal Pollution
+  "DAMAGED_CONCRETE", // Damaged concrete structures
   "DAMAGED_ELECTRICAL", // Damaged Electric wires and poles
 ] as const;
 
@@ -19,7 +19,7 @@ export type IssueType = (typeof ISSUE_TYPES)[number];
 // ML Class name to Issue Type mapping
 export const ML_CLASS_TO_ISSUE_TYPE: Record<string, IssueType> = {
   "Potholes and Road Damage": "POTHOLE",
-  "Littering": "GARBAGE",
+  Littering: "GARBAGE",
   "Illegal Parking Issues": "ILLEGAL_PARKING",
   "Broken Road Sign Issues": "DAMAGED_SIGN",
   "Fallen trees": "FALLEN_TREE",
@@ -42,12 +42,7 @@ export const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
   DAMAGED_ELECTRICAL: "Damaged Electric Poles/Wires",
 };
 
-export const ISSUE_STATUS = [
-  "OPEN",
-  "RESPONDED",
-  "VERIFIED",
-  "NEEDS_MANUAL_REVIEW",
-] as const;
+export const ISSUE_STATUS = ["OPEN", "CLOSED"] as const;
 
 export type IssueStatus = (typeof ISSUE_STATUS)[number];
 
@@ -158,9 +153,7 @@ export interface MunicipalityStats {
   municipalityId: string;
   totalIssues: number;
   openIssues: number;
-  respondedIssues: number;
-  verifiedIssues: number;
-  manualReviewIssues: number;
+  closedIssues: number;
   avgResolutionTimeHours: number | null;
   issuesByType: Record<IssueType, number>;
   monthlyTrend: Array<{

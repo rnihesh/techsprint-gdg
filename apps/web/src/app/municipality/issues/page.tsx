@@ -46,7 +46,7 @@ interface Issue {
   id: string;
   description: string;
   type: string;
-  status: "OPEN" | "RESPONDED" | "VERIFIED" | "NEEDS_MANUAL_REVIEW";
+  status: "OPEN" | "CLOSED";
   location: {
     latitude: number;
     longitude: number;
@@ -69,24 +69,14 @@ const statusConfig: Record<
   { label: string; color: string; bgColor: string }
 > = {
   OPEN: {
-    label: "Pending",
-    color: "text-yellow-700",
-    bgColor: "bg-yellow-100",
+    label: "Open",
+    color: "text-red-700",
+    bgColor: "bg-red-100",
   },
-  RESPONDED: {
-    label: "Resolved",
-    color: "text-blue-700",
-    bgColor: "bg-blue-100",
-  },
-  VERIFIED: {
-    label: "Verified",
+  CLOSED: {
+    label: "Closed",
     color: "text-green-700",
     bgColor: "bg-green-100",
-  },
-  NEEDS_MANUAL_REVIEW: {
-    label: "Under Review",
-    color: "text-orange-700",
-    bgColor: "bg-orange-100",
   },
 };
 
@@ -170,14 +160,7 @@ function IssuesContent() {
   const filteredIssues = issues.filter((issue) => {
     // Tab filter
     if (activeTab === "pending" && issue.status !== "OPEN") return false;
-    if (
-      activeTab === "resolved" &&
-      issue.status !== "RESPONDED" &&
-      issue.status !== "VERIFIED"
-    )
-      return false;
-    if (activeTab === "review" && issue.status !== "NEEDS_MANUAL_REVIEW")
-      return false;
+    if (activeTab === "resolved" && issue.status !== "CLOSED") return false;
 
     // Type filter
     if (typeFilter !== "all" && issue.type !== typeFilter) return false;
@@ -198,10 +181,7 @@ function IssuesContent() {
   // Stats
   const stats = {
     pending: issues.filter((i) => i.status === "OPEN").length,
-    resolved: issues.filter(
-      (i) => i.status === "RESPONDED" || i.status === "VERIFIED"
-    ).length,
-    review: issues.filter((i) => i.status === "NEEDS_MANUAL_REVIEW").length,
+    resolved: issues.filter((i) => i.status === "CLOSED").length,
   };
 
   // Handle image selection
@@ -328,13 +308,6 @@ function IssuesContent() {
               >
                 <span className="text-2xl font-bold">{stats.resolved}</span>
                 <span className="text-xs">Resolved</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="review"
-                className="flex flex-col py-3 data-[state=active]:bg-orange-100 data-[state=active]:text-orange-800"
-              >
-                <span className="text-2xl font-bold">{stats.review}</span>
-                <span className="text-xs">Under Review</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>

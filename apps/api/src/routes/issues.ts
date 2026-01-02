@@ -7,7 +7,7 @@ import {
   issueFiltersSchema,
   paginationSchema,
 } from "@techsprint/validation";
-import { generateIssueId } from "@techsprint/utils";
+import { generateIssueId, calculateMunicipalityScore } from "@techsprint/utils";
 import {
   authMiddleware,
   requireRole,
@@ -22,6 +22,45 @@ import {
 import type { Issue, IssueStatus, GeoLocation } from "@techsprint/types";
 
 const router: IRouter = Router();
+
+// Helper function to recalculate municipality score
+async function recalculateMunicipalityScore(municipalityId: string) {
+  const db = getAdminDb();
+
+  // Get all open issues for this municipality
+  const openIssuesSnapshot = await db
+    .collection(COLLECTIONS.ISSUES)
+    .where("municipalityId", "==", municipalityId)
+    .where("status", "==", "OPEN")
+    .get();
+
+  const openIssues = openIssuesSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    createdAt:
+      doc.data().createdAt?.toDate?.() || new Date(doc.data().createdAt),
+  }));
+
+  // Get count of closed issues (for bonus)
+  const closedIssuesSnapshot = await db
+    .collection(COLLECTIONS.ISSUES)
+    .where("municipalityId", "==", municipalityId)
+    .where("status", "==", "CLOSED")
+    .count()
+    .get();
+
+  const closedCount = closedIssuesSnapshot.data().count;
+
+  // Calculate new score
+  const { score } = calculateMunicipalityScore(openIssues, closedCount);
+
+  // Update municipality score
+  await db.collection(COLLECTIONS.MUNICIPALITIES).doc(municipalityId).update({
+    score,
+    updatedAt: new Date(),
+  });
+
+  return score;
+}
 
 // Get all issues (public)
 router.get("/", async (req: Request, res: Response) => {
@@ -90,10 +129,10 @@ router.get("/stats", async (_req: Request, res: Response) => {
     const totalSnapshot = await db.collection(COLLECTIONS.ISSUES).count().get();
     const totalIssues = totalSnapshot.data().count;
 
-    // Get resolved issues count (VERIFIED status)
+    // Get resolved issues count (CLOSED status)
     const resolvedSnapshot = await db
       .collection(COLLECTIONS.ISSUES)
-      .where("status", "==", "VERIFIED")
+      .where("status", "==", "CLOSED")
       .count()
       .get();
     const resolvedIssues = resolvedSnapshot.data().count;
@@ -259,7 +298,11 @@ router.post("/", async (req: Request, res: Response) => {
     // Find the appropriate municipality based on location first
     // (so we can use its data as fallback for region)
     let municipalityId = "MUN-DEFAULT";
-    let municipalityData: { name?: string; district?: string; state?: string } | null = null;
+    let municipalityData: {
+      name?: string;
+      district?: string;
+      state?: string;
+    } | null = null;
     try {
       const municipalityMatch = await findMunicipalityForLocation(
         latitude,
@@ -271,9 +314,12 @@ router.post("/", async (req: Request, res: Response) => {
         console.log(
           `Issue assigned to municipality ${municipalityMatch.name} (${municipalityMatch.matchType})`
         );
-        
+
         // Get municipality data for region fallback
-        const muniDoc = await db.collection(COLLECTIONS.MUNICIPALITIES).doc(municipalityId).get();
+        const muniDoc = await db
+          .collection(COLLECTIONS.MUNICIPALITIES)
+          .doc(municipalityId)
+          .get();
         if (muniDoc.exists) {
           const data = muniDoc.data();
           municipalityData = {
@@ -369,6 +415,11 @@ router.post("/", async (req: Request, res: Response) => {
         // Municipality might not exist yet
       });
 
+    // Recalculate municipality score (new issue might affect penalties)
+    await recalculateMunicipalityScore(municipalityId).catch(() => {
+      // Score calculation might fail if municipality doesn't exist
+    });
+
     res.status(201).json({
       success: true,
       data: { id: issueId, ...issue },
@@ -454,7 +505,7 @@ router.post(
         .collection(COLLECTIONS.ISSUES)
         .doc(id)
         .update({
-          status: issue.status === "OPEN" ? "RESPONDED" : issue.status,
+          status: "CLOSED",
           municipalityResponse: responseText || resolutionNote,
           resolution: {
             resolutionImageUrl: resolutionImageUrl || null,
@@ -464,14 +515,33 @@ router.post(
             verificationScore: null,
             verifiedAt: null,
           },
+          resolvedAt: now,
           updatedAt: now,
         });
+
+      // Update municipality resolved issues counter and recalculate score (only if status was OPEN before)
+      if (issue.status === "OPEN" && issue.municipalityId) {
+        const muniRef = db
+          .collection(COLLECTIONS.MUNICIPALITIES)
+          .doc(issue.municipalityId);
+        const muniDoc = await muniRef.get();
+        if (muniDoc.exists) {
+          const muniData = muniDoc.data();
+          await muniRef.update({
+            resolvedIssues: (muniData?.resolvedIssues || 0) + 1,
+            updatedAt: now,
+          });
+
+          // Recalculate municipality score
+          await recalculateMunicipalityScore(issue.municipalityId);
+        }
+      }
 
       res.json({
         success: true,
         data: {
           issueId: id,
-          status: issue.status === "OPEN" ? "RESPONDED" : issue.status,
+          status: "CLOSED",
         },
         error: null,
         timestamp: new Date().toISOString(),
@@ -514,13 +584,7 @@ router.patch(
       const { id } = req.params;
       const { status } = req.body;
 
-      const validStatuses = [
-        "OPEN",
-        "RESPONDED",
-        "VERIFIED",
-        "RESOLVED",
-        "REJECTED",
-      ];
+      const validStatuses = ["OPEN", "CLOSED"];
       if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({
           success: false,
@@ -564,11 +628,11 @@ router.patch(
         .update({
           status,
           updatedAt: now,
-          ...(status === "RESOLVED" ? { resolvedAt: now } : {}),
+          ...(status === "CLOSED" ? { resolvedAt: now } : {}),
         });
 
-      // Update municipality stats if resolved
-      if (status === "RESOLVED" && issue.municipalityId) {
+      // Update municipality stats if resolved (CLOSED)
+      if (status === "CLOSED" && issue.municipalityId) {
         const muniRef = db
           .collection(COLLECTIONS.MUNICIPALITIES)
           .doc(issue.municipalityId);
@@ -597,6 +661,159 @@ router.patch(
         success: false,
         data: null,
         error: "Failed to update issue status",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+);
+
+// Recalculate all municipality scores (admin utility endpoint)
+router.post("/recalculate-scores", async (_req: Request, res: Response) => {
+  try {
+    const db = getAdminDb();
+
+    // Get all municipalities
+    const municipalitiesSnapshot = await db
+      .collection(COLLECTIONS.MUNICIPALITIES)
+      .get();
+
+    const results: {
+      municipalityId: string;
+      name: string;
+      oldScore: number;
+      newScore: number;
+    }[] = [];
+
+    for (const doc of municipalitiesSnapshot.docs) {
+      const muniData = doc.data();
+      const oldScore = muniData.score || 0;
+
+      try {
+        // Also recalculate totalIssues and resolvedIssues from actual issues
+        const allIssuesSnapshot = await db
+          .collection(COLLECTIONS.ISSUES)
+          .where("municipalityId", "==", doc.id)
+          .get();
+
+        const closedIssuesSnapshot = await db
+          .collection(COLLECTIONS.ISSUES)
+          .where("municipalityId", "==", doc.id)
+          .where("status", "==", "CLOSED")
+          .count()
+          .get();
+
+        const totalIssues = allIssuesSnapshot.size;
+        const resolvedIssues = closedIssuesSnapshot.data().count;
+
+        // Update municipality with correct counts
+        await db.collection(COLLECTIONS.MUNICIPALITIES).doc(doc.id).update({
+          totalIssues,
+          resolvedIssues,
+          updatedAt: new Date(),
+        });
+
+        const newScore = await recalculateMunicipalityScore(doc.id);
+        results.push({
+          municipalityId: doc.id,
+          name: muniData.name,
+          oldScore,
+          newScore,
+        });
+      } catch (err) {
+        console.error(`Failed to recalculate score for ${doc.id}:`, err);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        updated: results.length,
+        results,
+      },
+      error: null,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error(
+      "Error recalculating scores:",
+      error?.message || String(error)
+    );
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: "Failed to recalculate scores",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Delete an issue (admin only)
+router.delete(
+  "/:issueId",
+  authMiddleware,
+  requireRole("PLATFORM_MAINTAINER"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const db = getAdminDb();
+      const { issueId } = req.params;
+
+      // Get the issue first
+      const issueRef = db.collection(COLLECTIONS.ISSUES).doc(issueId);
+      const issueDoc = await issueRef.get();
+
+      if (!issueDoc.exists) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "Issue not found",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const issueData = issueDoc.data();
+      const municipalityId = issueData?.municipalityId;
+
+      // Delete the issue
+      await issueRef.delete();
+
+      // Update municipality stats if applicable
+      if (municipalityId) {
+        const municipalityRef = db
+          .collection(COLLECTIONS.MUNICIPALITIES)
+          .doc(municipalityId);
+        const municipalityDoc = await municipalityRef.get();
+
+        if (municipalityDoc.exists) {
+          const muniData = municipalityDoc.data();
+          const totalIssues = Math.max(0, (muniData?.totalIssues || 1) - 1);
+          const resolvedIssues =
+            issueData?.status === "CLOSED"
+              ? Math.max(0, (muniData?.resolvedIssues || 1) - 1)
+              : muniData?.resolvedIssues || 0;
+
+          await municipalityRef.update({
+            totalIssues,
+            resolvedIssues,
+            updatedAt: new Date(),
+          });
+
+          // Recalculate score
+          await recalculateMunicipalityScore(municipalityId);
+        }
+      }
+
+      res.json({
+        success: true,
+        data: { deleted: issueId },
+        error: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error: any) {
+      console.error("Error deleting issue:", error?.message || String(error));
+      res.status(500).json({
+        success: false,
+        data: null,
+        error: "Failed to delete issue",
         timestamp: new Date().toISOString(),
       });
     }

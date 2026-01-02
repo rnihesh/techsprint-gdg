@@ -61,7 +61,7 @@ export interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER";
+  role: "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER" | "admin | null";
   municipalityId?: string;
   createdAt: Date;
   lastLogin: Date;

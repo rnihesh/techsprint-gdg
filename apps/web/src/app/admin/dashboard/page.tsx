@@ -58,9 +58,7 @@ interface AdminStats {
   pendingRegistrations: number;
   issuesByStatus: {
     OPEN: number;
-    RESPONDED: number;
-    VERIFIED: number;
-    NEEDS_MANUAL_REVIEW: number;
+    CLOSED: number;
   };
 }
 
@@ -299,7 +297,11 @@ function AdminDashboardContent() {
     }
   };
 
-  const handleUpdateUserRole = async (userId: string, role: string, municipalityId?: string) => {
+  const handleUpdateUserRole = async (
+    userId: string,
+    role: string,
+    municipalityId?: string
+  ) => {
     try {
       const token = await getToken();
       const response = await fetch(
@@ -328,12 +330,35 @@ function AdminDashboardContent() {
   };
 
   const indianStates = [
-    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
-    "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand",
-    "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur",
-    "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan",
-    "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
-    "Uttarakhand", "West Bengal",
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Delhi",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
   ];
 
   if (loading) {
@@ -380,9 +405,7 @@ function AdminDashboardContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total Users
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -412,11 +435,15 @@ function AdminDashboardContent() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalIssues || 0}</div>
+              <div className="text-2xl font-bold">
+                {stats?.totalIssues || 0}
+              </div>
             </CardContent>
           </Card>
 
-          <Card className={stats?.pendingRegistrations ? "border-yellow-500" : ""}>
+          <Card
+            className={stats?.pendingRegistrations ? "border-yellow-500" : ""}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">
                 Pending Registrations
@@ -438,22 +465,18 @@ function AdminDashboardContent() {
               <CardTitle className="text-lg">Issue Status Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <span className="text-sm">Open: {stats.issuesByStatus.OPEN}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-blue-500" />
-                  <span className="text-sm">Responded: {stats.issuesByStatus.RESPONDED}</span>
+                  <div className="w-3 h-3 rounded-full bg-red-500" />
+                  <span className="text-sm">
+                    Open: {stats.issuesByStatus.OPEN}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-sm">Verified: {stats.issuesByStatus.VERIFIED}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span className="text-sm">Manual Review: {stats.issuesByStatus.NEEDS_MANUAL_REVIEW}</span>
+                  <span className="text-sm">
+                    Closed: {stats.issuesByStatus.CLOSED}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -497,7 +520,10 @@ function AdminDashboardContent() {
                   />
                 </div>
               </div>
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <Dialog
+                open={showCreateDialog}
+                onOpenChange={setShowCreateDialog}
+              >
                 <DialogTrigger asChild>
                   <Button>
                     <Plus className="h-4 w-4 mr-2" />
@@ -518,7 +544,10 @@ function AdminDashboardContent() {
                         placeholder="e.g., Municipal Corporation of Delhi"
                         value={createForm.name}
                         onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, name: e.target.value }))
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            name: e.target.value,
+                          }))
                         }
                       />
                     </div>
@@ -535,11 +564,21 @@ function AdminDashboardContent() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="MUNICIPAL_CORPORATION">Municipal Corporation</SelectItem>
-                            <SelectItem value="MUNICIPALITY">Municipality</SelectItem>
-                            <SelectItem value="NAGAR_PANCHAYAT">Nagar Panchayat</SelectItem>
-                            <SelectItem value="GRAM_PANCHAYAT">Gram Panchayat</SelectItem>
-                            <SelectItem value="CANTONMENT_BOARD">Cantonment Board</SelectItem>
+                            <SelectItem value="MUNICIPAL_CORPORATION">
+                              Municipal Corporation
+                            </SelectItem>
+                            <SelectItem value="MUNICIPALITY">
+                              Municipality
+                            </SelectItem>
+                            <SelectItem value="NAGAR_PANCHAYAT">
+                              Nagar Panchayat
+                            </SelectItem>
+                            <SelectItem value="GRAM_PANCHAYAT">
+                              Gram Panchayat
+                            </SelectItem>
+                            <SelectItem value="CANTONMENT_BOARD">
+                              Cantonment Board
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -570,7 +609,10 @@ function AdminDashboardContent() {
                         placeholder="Enter district"
                         value={createForm.district}
                         onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, district: e.target.value }))
+                          setCreateForm((prev) => ({
+                            ...prev,
+                            district: e.target.value,
+                          }))
                         }
                       />
                     </div>
@@ -581,38 +623,54 @@ function AdminDashboardContent() {
                           placeholder="North (lat)"
                           value={createForm.north}
                           onChange={(e) =>
-                            setCreateForm((prev) => ({ ...prev, north: e.target.value }))
+                            setCreateForm((prev) => ({
+                              ...prev,
+                              north: e.target.value,
+                            }))
                           }
                         />
                         <Input
                           placeholder="South (lat)"
                           value={createForm.south}
                           onChange={(e) =>
-                            setCreateForm((prev) => ({ ...prev, south: e.target.value }))
+                            setCreateForm((prev) => ({
+                              ...prev,
+                              south: e.target.value,
+                            }))
                           }
                         />
                         <Input
                           placeholder="East (lng)"
                           value={createForm.east}
                           onChange={(e) =>
-                            setCreateForm((prev) => ({ ...prev, east: e.target.value }))
+                            setCreateForm((prev) => ({
+                              ...prev,
+                              east: e.target.value,
+                            }))
                           }
                         />
                         <Input
                           placeholder="West (lng)"
                           value={createForm.west}
                           onChange={(e) =>
-                            setCreateForm((prev) => ({ ...prev, west: e.target.value }))
+                            setCreateForm((prev) => ({
+                              ...prev,
+                              west: e.target.value,
+                            }))
                           }
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Define the rectangular boundary for this municipality's jurisdiction
+                        Define the rectangular boundary for this municipality's
+                        jurisdiction
                       </p>
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowCreateDialog(false)}
+                    >
                       Cancel
                     </Button>
                     <Button onClick={handleCreateMunicipality}>
@@ -639,7 +697,9 @@ function AdminDashboardContent() {
                             <Building2 className="h-6 w-6 text-primary" />
                           </div>
                           <div>
-                            <h3 className="font-semibold">{municipality.name}</h3>
+                            <h3 className="font-semibold">
+                              {municipality.name}
+                            </h3>
                             <p className="text-sm text-muted-foreground">
                               <MapPin className="inline h-3 w-3 mr-1" />
                               {municipality.district}, {municipality.state}
@@ -648,15 +708,20 @@ function AdminDashboardContent() {
                         </div>
                         <div className="flex items-center gap-6">
                           <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Score</p>
+                            <p className="text-sm text-muted-foreground">
+                              Score
+                            </p>
                             <p className="text-xl font-bold text-primary">
                               {municipality.score}
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Issues</p>
+                            <p className="text-sm text-muted-foreground">
+                              Issues
+                            </p>
                             <p className="text-lg font-semibold">
-                              {municipality.resolvedIssues}/{municipality.totalIssues}
+                              {municipality.resolvedIssues}/
+                              {municipality.totalIssues}
                             </p>
                           </div>
                           <Badge>{municipality.type.replace(/_/g, " ")}</Badge>
@@ -670,7 +735,9 @@ function AdminDashboardContent() {
                 <Card>
                   <CardContent className="py-12 text-center">
                     <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="font-semibold mb-2">No Municipalities Yet</h3>
+                    <h3 className="font-semibold mb-2">
+                      No Municipalities Yet
+                    </h3>
                     <p className="text-muted-foreground mb-4">
                       Create your first municipality to get started
                     </p>
@@ -711,7 +778,9 @@ function AdminDashboardContent() {
                       >
                         <div className="flex items-start justify-between">
                           <div>
-                            <h4 className="font-semibold">{reg.municipalityName}</h4>
+                            <h4 className="font-semibold">
+                              {reg.municipalityName}
+                            </h4>
                             <p className="text-sm text-muted-foreground">
                               {reg.district}, {reg.state}
                             </p>
@@ -798,12 +867,19 @@ function AdminDashboardContent() {
                   <Button
                     variant="outline"
                     onClick={() =>
-                      setRejectDialog({ open: false, registrationId: "", reason: "" })
+                      setRejectDialog({
+                        open: false,
+                        registrationId: "",
+                        reason: "",
+                      })
                     }
                   >
                     Cancel
                   </Button>
-                  <Button variant="destructive" onClick={handleRejectRegistration}>
+                  <Button
+                    variant="destructive"
+                    onClick={handleRejectRegistration}
+                  >
                     Reject Registration
                   </Button>
                 </DialogFooter>
@@ -832,8 +908,12 @@ function AdminDashboardContent() {
                           <Users className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium">{user.displayName || "Unknown"}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="font-medium">
+                            {user.displayName || "Unknown"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {user.email}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -842,7 +922,9 @@ function AdminDashboardContent() {
                           onValueChange={(value) => {
                             if (value === "municipality") {
                               // Would need to show a municipality selector
-                              toast.info("Select a municipality to assign this user to");
+                              toast.info(
+                                "Select a municipality to assign this user to"
+                              );
                             } else {
                               handleUpdateUserRole(user.id, value);
                             }
@@ -853,7 +935,9 @@ function AdminDashboardContent() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="citizen">Citizen</SelectItem>
-                            <SelectItem value="municipality">Municipality</SelectItem>
+                            <SelectItem value="municipality">
+                              Municipality
+                            </SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                           </SelectContent>
                         </Select>
@@ -903,12 +987,18 @@ function AdminDashboardContent() {
                           className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg"
                         >
                           <div>
-                            <p className="font-medium">{reg.municipalityName}</p>
+                            <p className="font-medium">
+                              {reg.municipalityName}
+                            </p>
                             <p className="text-sm text-muted-foreground">
                               {reg.district}, {reg.state}
                             </p>
                           </div>
-                          <Button size="sm" variant="outline" onClick={() => setActiveTab("registrations")}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setActiveTab("registrations")}
+                          >
                             Review
                           </Button>
                         </div>
@@ -930,19 +1020,27 @@ function AdminDashboardContent() {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Resolution Rate</span>
+                      <span className="text-muted-foreground">
+                        Resolution Rate
+                      </span>
                       <span className="font-semibold">
                         {stats?.totalIssues
                           ? Math.round(
-                              ((stats.issuesByStatus?.VERIFIED || 0) / stats.totalIssues) * 100
+                              ((stats.issuesByStatus?.VERIFIED || 0) /
+                                stats.totalIssues) *
+                                100
                             )
                           : 0}
                         %
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Active Municipalities</span>
-                      <span className="font-semibold">{stats?.totalMunicipalities || 0}</span>
+                      <span className="text-muted-foreground">
+                        Active Municipalities
+                      </span>
+                      <span className="font-semibold">
+                        {stats?.totalMunicipalities || 0}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Open Issues</span>

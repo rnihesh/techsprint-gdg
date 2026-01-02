@@ -37,6 +37,8 @@ interface LeaderboardEntry {
     state: string;
     district: string;
     score: number;
+    resolvedIssues?: number;
+    totalIssues?: number;
   };
   score: number;
   trend: "UP" | "DOWN" | "STABLE";
@@ -157,7 +159,10 @@ export default function LeaderboardPage() {
 
   const stats = {
     totalMunicipalities,
-    totalIssuesResolved: 0,
+    totalIssuesResolved: leaderboard.reduce(
+      (acc, item) => acc + (item.municipality.resolvedIssues || 0),
+      0
+    ),
     avgScore:
       leaderboard.length > 0
         ? Math.round(
