@@ -18,6 +18,9 @@ import type { Express } from "express";
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy - required when behind reverse proxy (nginx) to get real client IP
+app.set("trust proxy", true);
+
 // Middleware
 app.use(helmet());
 app.use(
