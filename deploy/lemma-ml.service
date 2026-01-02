@@ -1,0 +1,13 @@
+[Unit]
+Description=Lemma ML Server
+After=network.target
+
+[Service]
+Type=simple
+User=poonih
+WorkingDirectory=/home/poonih/venom69/apps/ml
+ExecStart=/home/poonih/techsprint-gdg/.venv/bin/python api_server.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
