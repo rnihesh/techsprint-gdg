@@ -55,13 +55,13 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope("email");
 googleProvider.addScope("profile");
 
-// User profile type - matching backend USER_ROLES: ["USER", "MUNICIPALITY_USER", "PLATFORM_MAINTAINER"]
+// User profile type - matching backend USER_ROLES: ["USER", "MUNICIPALITY_USER", "PLATFORM_MAINTAINER", "admin"]
 export interface UserProfile {
   uid: string;
   email: string | null;
   displayName: string | null;
   photoURL: string | null;
-  role: "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER" | "admin | null";
+  role: "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER" | "admin" | null;
   municipalityId?: string;
   createdAt: Date;
   lastLogin: Date;

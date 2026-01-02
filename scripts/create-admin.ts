@@ -62,9 +62,9 @@ async function createAdmin(uid: string) {
     const userData = userDoc.data();
     console.log('Found user:', userData?.email || userData?.displayName || uid);
 
-    // Update role to admin
+    // Update role to PLATFORM_MAINTAINER (admin)
     await userRef.update({
-      role: 'admin',
+      role: 'PLATFORM_MAINTAINER',
       updatedAt: new Date().toISOString(),
     });
 

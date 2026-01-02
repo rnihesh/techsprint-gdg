@@ -42,23 +42,65 @@ router.get(
         query = query.where("district", "==", district);
       }
 
-      const snapshot = await query
-        .limit(pageSize)
-        .offset((page - 1) * pageSize)
-        .get();
+      // Firestore doesn't support text search, so we fetch all and filter client-side
+      // For better performance in production, consider using Algolia or Firebase Extensions
+      let allDocs;
+      if (search && typeof search === "string" && search.trim()) {
+        const allSnapshot = await query.get();
+        const searchLower = search.toLowerCase().trim();
+        allDocs = allSnapshot.docs.filter((doc) => {
+          const data = doc.data();
+          return (
+            data.name?.toLowerCase().includes(searchLower) ||
+            data.district?.toLowerCase().includes(searchLower) ||
+            data.state?.toLowerCase().includes(searchLower)
+          );
+        });
+      } else {
+        const snapshot = await query
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
+          .get();
+        allDocs = null;
+        
+        const municipalities = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate(),
+          updatedAt: doc.data().updatedAt?.toDate(),
+        }));
 
-      const municipalities = snapshot.docs.map((doc) => ({
+        const countSnapshot = await db
+          .collection(COLLECTIONS.MUNICIPALITIES)
+          .count()
+          .get();
+        const total = countSnapshot.data().count;
+
+        return res.json({
+          success: true,
+          data: {
+            items: municipalities,
+            total,
+            page,
+            pageSize,
+            hasMore: (page - 1) * pageSize + municipalities.length < total,
+          },
+          error: null,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Paginate filtered results
+      const total = allDocs.length;
+      const startIndex = (page - 1) * pageSize;
+      const paginatedDocs = allDocs.slice(startIndex, startIndex + pageSize);
+      
+      const municipalities = paginatedDocs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         updatedAt: doc.data().updatedAt?.toDate(),
       }));
-
-      const countSnapshot = await db
-        .collection(COLLECTIONS.MUNICIPALITIES)
-        .count()
-        .get();
-      const total = countSnapshot.data().count;
 
       res.json({
         success: true,
@@ -67,7 +109,7 @@ router.get(
           total,
           page,
           pageSize,
-          hasMore: (page - 1) * pageSize + municipalities.length < total,
+          hasMore: startIndex + municipalities.length < total,
         },
         error: null,
         timestamp: new Date().toISOString(),
@@ -590,24 +632,74 @@ router.get("/users", async (req: AuthenticatedRequest, res: Response) => {
 
     let query = db.collection(COLLECTIONS.USERS).orderBy("createdAt", "desc");
 
-    if (role) {
+    if (role && typeof role === "string") {
       query = query.where("role", "==", role);
     }
 
-    const snapshot = await query
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .get();
+    // Firestore doesn't support text search, so we fetch all and filter client-side
+    let allDocs;
+    if (search && typeof search === "string" && search.trim()) {
+      const allSnapshot = await query.get();
+      const searchLower = search.toLowerCase().trim();
+      allDocs = allSnapshot.docs.filter((doc) => {
+        const data = doc.data();
+        return (
+          data.email?.toLowerCase().includes(searchLower) ||
+          data.displayName?.toLowerCase().includes(searchLower)
+        );
+      });
+    } else {
+      const snapshot = await query
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .get();
 
-    const users = snapshot.docs.map((doc) => ({
+      const users = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        lastLogin: doc.data().lastLogin?.toDate(),
+      }));
+
+      // Count with role filter if applied
+      let total;
+      if (role && typeof role === "string") {
+        const countSnapshot = await db
+          .collection(COLLECTIONS.USERS)
+          .where("role", "==", role)
+          .count()
+          .get();
+        total = countSnapshot.data().count;
+      } else {
+        const countSnapshot = await db.collection(COLLECTIONS.USERS).count().get();
+        total = countSnapshot.data().count;
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          items: users,
+          total,
+          page,
+          pageSize,
+          hasMore: (page - 1) * pageSize + users.length < total,
+        },
+        error: null,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Paginate filtered results
+    const total = allDocs.length;
+    const startIndex = (page - 1) * pageSize;
+    const paginatedDocs = allDocs.slice(startIndex, startIndex + pageSize);
+
+    const users = paginatedDocs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate(),
       lastLogin: doc.data().lastLogin?.toDate(),
     }));
-
-    const countSnapshot = await db.collection(COLLECTIONS.USERS).count().get();
-    const total = countSnapshot.data().count;
 
     res.json({
       success: true,
@@ -616,7 +708,7 @@ router.get("/users", async (req: AuthenticatedRequest, res: Response) => {
         total,
         page,
         pageSize,
-        hasMore: (page - 1) * pageSize + users.length < total,
+        hasMore: startIndex + users.length < total,
       },
       error: null,
       timestamp: new Date().toISOString(),
@@ -697,6 +789,149 @@ router.put(
         success: false,
         data: null,
         error: "Failed to update user role",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+);
+
+// ============================================
+// ISSUE MANAGEMENT (Admin)
+// ============================================
+
+// Delete an issue
+router.delete(
+  "/issues/:id",
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const db = getAdminDb();
+      const { id } = req.params;
+
+      const docRef = db.collection(COLLECTIONS.ISSUES).doc(id);
+      const doc = await docRef.get();
+
+      if (!doc.exists) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "Issue not found",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Get the municipality ID to update stats
+      const issueData = doc.data()!;
+      const municipalityId = issueData.municipalityId;
+
+      await docRef.delete();
+
+      // Update municipality stats
+      if (municipalityId) {
+        const muniRef = db.collection(COLLECTIONS.MUNICIPALITIES).doc(municipalityId);
+        const muniDoc = await muniRef.get();
+        if (muniDoc.exists) {
+          const muniData = muniDoc.data()!;
+          const wasResolved = issueData.status === "CLOSED";
+          await muniRef.update({
+            totalIssues: Math.max(0, (muniData.totalIssues || 1) - 1),
+            resolvedIssues: wasResolved 
+              ? Math.max(0, (muniData.resolvedIssues || 1) - 1) 
+              : muniData.resolvedIssues || 0,
+            updatedAt: new Date(),
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: { deleted: true },
+        error: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error deleting issue:", error?.message || String(error));
+      res.status(500).json({
+        success: false,
+        data: null,
+        error: "Failed to delete issue",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+);
+
+// Update issue status
+router.put(
+  "/issues/:id/status",
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const db = getAdminDb();
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!status || !["OPEN", "CLOSED"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: "Invalid status. Must be OPEN or CLOSED",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const docRef = db.collection(COLLECTIONS.ISSUES).doc(id);
+      const doc = await docRef.get();
+
+      if (!doc.exists) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "Issue not found",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const issueData = doc.data()!;
+      const previousStatus = issueData.status;
+      const municipalityId = issueData.municipalityId;
+
+      await docRef.update({
+        status,
+        updatedAt: new Date(),
+      });
+
+      // Update municipality resolved count if status changed
+      if (municipalityId && previousStatus !== status) {
+        const muniRef = db.collection(COLLECTIONS.MUNICIPALITIES).doc(municipalityId);
+        const muniDoc = await muniRef.get();
+        if (muniDoc.exists) {
+          const muniData = muniDoc.data()!;
+          let resolvedIssues = muniData.resolvedIssues || 0;
+          
+          if (status === "CLOSED" && previousStatus !== "CLOSED") {
+            resolvedIssues++;
+          } else if (status === "OPEN" && previousStatus === "CLOSED") {
+            resolvedIssues = Math.max(0, resolvedIssues - 1);
+          }
+          
+          await muniRef.update({
+            resolvedIssues,
+            updatedAt: new Date(),
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: { id, status },
+        error: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error updating issue status:", error?.message || String(error));
+      res.status(500).json({
+        success: false,
+        data: null,
+        error: "Failed to update issue status",
         timestamp: new Date().toISOString(),
       });
     }

@@ -96,7 +96,7 @@ export function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {userProfile?.role === "PLATFORM_MAINTAINER" && (
+        {(userProfile?.role === "PLATFORM_MAINTAINER" || userProfile?.role === "admin") && (
           <DropdownMenuItem onClick={() => router.push("/admin/dashboard")}>
             <Shield className="mr-2 h-4 w-4 text-destructive" />
             Admin Dashboard

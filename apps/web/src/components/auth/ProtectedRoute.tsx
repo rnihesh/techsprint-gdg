@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, ShieldAlert } from "lucide-react";
 
-type Role = "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER";
+type Role = "USER" | "MUNICIPALITY_USER" | "PLATFORM_MAINTAINER" | "admin";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -52,9 +52,10 @@ export function ProtectedRoute({
     if (allowedRoles && allowedRoles.length > 0) {
       const userRole = (userProfile?.role || "USER") as Role;
 
-      // Admin has access to everything
+      // Admin has access to everything (check both role names)
       if (
         userRole === "PLATFORM_MAINTAINER" ||
+        userRole === "admin" ||
         allowedRoles.includes(userRole)
       ) {
         setIsAuthorized(true);
@@ -67,7 +68,7 @@ export function ProtectedRoute({
         router.push("/");
       } else if (userRole === "MUNICIPALITY_USER") {
         router.push("/municipality/issues");
-      } else if (userRole === "PLATFORM_MAINTAINER") {
+      } else if (userRole === "PLATFORM_MAINTAINER" || userRole === "admin") {
         router.push("/admin/dashboard");
       } else {
         router.push("/");
@@ -130,7 +131,7 @@ export function MunicipalityOnly({ children }: { children: React.ReactNode }) {
 
 export function AdminOnly({ children }: { children: React.ReactNode }) {
   return (
-    <ProtectedRoute allowedRoles={["PLATFORM_MAINTAINER"]}>
+    <ProtectedRoute allowedRoles={["PLATFORM_MAINTAINER", "admin"]}>
       {children}
     </ProtectedRoute>
   );

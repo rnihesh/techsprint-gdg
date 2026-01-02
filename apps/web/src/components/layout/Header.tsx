@@ -27,10 +27,12 @@ import { toast } from "sonner";
 
 // Navigation items for different user roles
 const getNavigation = (role: string | undefined) => {
-  if (role === "PLATFORM_MAINTAINER") {
+  if (role === "PLATFORM_MAINTAINER" || role === "admin") {
     // Admin: management pages only
     return [
       { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+      { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
+      { name: "Municipalities", href: "/municipalities", icon: Building2 },
     ];
   }
 

@@ -144,7 +144,7 @@ const getTypeBadge = (type: string) => {
 export function GoogleMapComponent({
   issues,
   municipalities = [],
-  center = defaultCenter,
+  center,
   zoom = 12,
   onBoundsChange,
   showMunicipalityBorders = true,
@@ -154,12 +154,40 @@ export function GoogleMapComponent({
   const [hoveredMunicipality, setHoveredMunicipality] = useState<string | null>(
     null
   );
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationChecked, setLocationChecked] = useState(false);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
     libraries,
   });
+
+  // Get user's location on mount (before map renders)
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setLocationChecked(true);
+        },
+        () => {
+          // User denied location, use default
+          console.log("Geolocation permission denied, using default location");
+          setLocationChecked(true);
+        },
+        { timeout: 5000, enableHighAccuracy: true }
+      );
+    } else {
+      setLocationChecked(true);
+    }
+  }, []);
+
+  // Determine the map center: prop > user location > default
+  const mapCenter = center || userLocation || defaultCenter;
 
   const onLoad = useCallback((map: google.maps.Map) => {
     setMap(map);
@@ -185,24 +213,6 @@ export function GoogleMapComponent({
     }
   }, [map, onBoundsChange]);
 
-  // Try to get user's location
-  useEffect(() => {
-    if (map && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          map.panTo({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        () => {
-          // User denied location, stay at default center
-          console.log("Geolocation permission denied, using default location");
-        }
-      );
-    }
-  }, [map]);
-
   if (loadError) {
     return (
       <div className="flex items-center justify-center h-full bg-muted">
@@ -217,12 +227,15 @@ export function GoogleMapComponent({
     );
   }
 
-  if (!isLoaded) {
+  // Wait for both: Google Maps to load AND location check to complete
+  if (!isLoaded || !locationChecked) {
     return (
       <div className="flex items-center justify-center h-full bg-muted">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading map...</p>
+          <p className="text-muted-foreground">
+            {!locationChecked ? "Getting your location..." : "Loading map..."}
+          </p>
         </div>
       </div>
     );
@@ -231,7 +244,7 @@ export function GoogleMapComponent({
   return (
     <GoogleMap
       mapContainerStyle={containerStyle}
-      center={center}
+      center={mapCenter}
       zoom={zoom}
       onLoad={onLoad}
       onUnmount={onUnmount}
