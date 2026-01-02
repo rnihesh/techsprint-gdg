@@ -67,7 +67,7 @@ interface Stats {
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading, profileLoading } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [locationCoords, setLocationCoords] = useState<{
@@ -83,7 +83,7 @@ export default function HomePage() {
 
   // Redirect municipality/admin users to their dashboards
   useEffect(() => {
-    if (!authLoading && user && userProfile) {
+    if (!authLoading && !profileLoading && user && userProfile) {
       if (userProfile.role === "PLATFORM_MAINTAINER") {
         router.replace("/admin/dashboard");
         return;
@@ -93,7 +93,7 @@ export default function HomePage() {
         return;
       }
     }
-  }, [authLoading, user, userProfile, router]);
+  }, [authLoading, profileLoading, user, userProfile, router]);
 
   // Fetch stats on mount
   useEffect(() => {
@@ -182,7 +182,7 @@ export default function HomePage() {
     userProfile &&
     (userProfile.role === "PLATFORM_MAINTAINER" ||
       userProfile.role === "MUNICIPALITY_USER");
-  const isCheckingAuth = authLoading || (user && !userProfile);
+  const isCheckingAuth = authLoading || profileLoading || (user && !userProfile);
 
   if (isCheckingAuth || shouldRedirect) {
     return (
@@ -542,28 +542,6 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* CTA Section - Only for non-logged-in visitors */}
-        {!user && (
-          <section className="py-16">
-            <div className="container px-4">
-              <Card className="bg-primary text-primary-foreground">
-                <CardContent className="py-12 text-center">
-                  <h2 className="text-3xl font-bold mb-4">
-                    Municipality Officials
-                  </h2>
-                  <p className="text-lg opacity-90 mb-6 max-w-2xl mx-auto">
-                    If you&apos;re a municipality official, login with your
-                    provided credentials to respond to complaints and track
-                    performance.
-                  </p>
-                  <Button size="lg" variant="secondary" asChild>
-                    <Link href="/auth/login">Municipality Login</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-        )}
       </main>
 
       <Footer />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { AlertTriangle, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,9 @@ interface MapPickerProps {
   selectedLocation?: { lat: number; lng: number } | null;
   height?: string;
 }
+
+// Libraries to load - defined outside component to prevent reloads
+const libraries: ("places" | "geometry")[] = ["places"];
 
 const containerStyle = {
   width: "100%",
@@ -47,10 +50,18 @@ export function MapPicker({
     lat: number;
     lng: number;
   } | null>(selectedLocation || null);
+  const [isMounted, setIsMounted] = useState(false);
+  const mapKey = useRef(Date.now());
+
+  // Ensure component is mounted before rendering map (fixes SSR issues)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries,
   });
 
   const onLoad = useCallback((map: google.maps.Map) => {
@@ -141,7 +152,7 @@ export function MapPicker({
     );
   }
 
-  if (!isLoaded) {
+  if (!isLoaded || !isMounted) {
     return (
       <div
         className="flex items-center justify-center bg-muted rounded-lg"
@@ -162,6 +173,7 @@ export function MapPicker({
         style={{ height }}
       >
         <GoogleMap
+          key={mapKey.current}
           mapContainerStyle={containerStyle}
           center={center}
           zoom={14}

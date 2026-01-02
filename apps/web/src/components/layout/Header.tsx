@@ -53,7 +53,7 @@ const getNavigation = (role: string | undefined) => {
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, userProfile, signOut, loading } = useAuth();
+  const { user, userProfile, signOut, loading, profileLoading } = useAuth();
   const router = useRouter();
 
   const isLoggedIn = !!user;
@@ -67,7 +67,7 @@ export function Header() {
   }, [user, userProfile]);
 
   // If user is logged in but profile not loaded yet, don't show nav (avoid flicker)
-  const isProfileLoading = isLoggedIn && !userProfile;
+  const isProfileLoading = isLoggedIn && (profileLoading || !userProfile);
 
   const navigation = useMemo(() => {
     if (isProfileLoading) return []; // Don't show nav while loading profile

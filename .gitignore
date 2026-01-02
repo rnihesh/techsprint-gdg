@@ -54,3 +54,6 @@ serviceAccountKey.json
 
 # Misc
 .turbo/
+
+dataset/
+.venv

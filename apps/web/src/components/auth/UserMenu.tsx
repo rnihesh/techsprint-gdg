@@ -23,10 +23,10 @@ import {
 import { toast } from "sonner";
 
 export function UserMenu() {
-  const { user, userProfile, signOut, loading } = useAuth();
+  const { user, userProfile, signOut, loading, profileLoading } = useAuth();
   const router = useRouter();
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <Button variant="ghost" size="icon" disabled>
         <Loader2 className="h-5 w-5 animate-spin" />

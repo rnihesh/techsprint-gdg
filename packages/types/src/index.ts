@@ -1,22 +1,46 @@
 // ============================================
-// ISSUE TYPES
+// ISSUE TYPES (Aligned with ML Classifier)
 // ============================================
 
 export const ISSUE_TYPES = [
-  "POTHOLE",
-  "GARBAGE",
-  "DRAINAGE",
-  "ROAD_DAMAGE",
-  "STREETLIGHT",
-  "WATER_SUPPLY",
-  "SEWAGE",
-  "ENCROACHMENT",
-  "SANITATION",
-  "PARKS",
-  "OTHER",
+  "POTHOLE",           // Potholes and Road Damage
+  "GARBAGE",           // Littering/Garbage on Public Places
+  "ILLEGAL_PARKING",   // Illegal Parking Issues
+  "DAMAGED_SIGN",      // Broken Road Sign Issues
+  "FALLEN_TREE",       // Fallen trees
+  "VANDALISM",         // Vandalism Issues (Graffiti)
+  "DEAD_ANIMAL",       // Dead Animal Pollution
+  "DAMAGED_CONCRETE",  // Damaged concrete structures
+  "DAMAGED_ELECTRICAL", // Damaged Electric wires and poles
 ] as const;
 
 export type IssueType = (typeof ISSUE_TYPES)[number];
+
+// ML Class name to Issue Type mapping
+export const ML_CLASS_TO_ISSUE_TYPE: Record<string, IssueType> = {
+  "Potholes and Road Damage": "POTHOLE",
+  "Littering": "GARBAGE",
+  "Illegal Parking Issues": "ILLEGAL_PARKING",
+  "Broken Road Sign Issues": "DAMAGED_SIGN",
+  "Fallen trees": "FALLEN_TREE",
+  "Vandalism Issues": "VANDALISM",
+  "Dead Animal Pollution": "DEAD_ANIMAL",
+  "Damaged concrete structures": "DAMAGED_CONCRETE",
+  "Damaged Electric wires and poles": "DAMAGED_ELECTRICAL",
+};
+
+// Issue Type to display label mapping
+export const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
+  POTHOLE: "Potholes & Road Damage",
+  GARBAGE: "Littering/Garbage",
+  ILLEGAL_PARKING: "Illegal Parking",
+  DAMAGED_SIGN: "Broken Road Signs",
+  FALLEN_TREE: "Fallen Trees",
+  VANDALISM: "Vandalism/Graffiti",
+  DEAD_ANIMAL: "Dead Animal Pollution",
+  DAMAGED_CONCRETE: "Damaged Concrete Structures",
+  DAMAGED_ELECTRICAL: "Damaged Electric Poles/Wires",
+};
 
 export const ISSUE_STATUS = [
   "OPEN",

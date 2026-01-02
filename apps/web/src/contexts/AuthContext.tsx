@@ -19,6 +19,7 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  profileLoading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Subscribe to auth state changes
@@ -44,11 +46,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       if (firebaseUser) {
         // Fetch user profile from Firestore
+        setProfileLoading(true);
         try {
           const profile = await getUserProfile(firebaseUser.uid);
           setUserProfile(profile);
         } catch (err) {
           console.error('Error fetching user profile:', err);
+        } finally {
+          setProfileLoading(false);
         }
       } else {
         setUserProfile(null);
@@ -67,42 +72,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
-      setLoading(true);
-      await signInWithEmail(email, password);
+      setProfileLoading(true);
+      const userCredential = await signInWithEmail(email, password);
+      // Fetch profile immediately after sign-in (don't wait for onAuthStateChanged)
+      const profile = await getUserProfile(userCredential.user.uid);
+      setUser(userCredential.user);
+      setUserProfile(profile);
+      setProfileLoading(false);
     } catch (err: unknown) {
+      setProfileLoading(false);
       const message = getErrorMessage(err);
       setError(message);
       throw new Error(message);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, displayName?: string) => {
     try {
       setError(null);
-      setLoading(true);
-      await registerWithEmail(email, password, displayName);
+      setProfileLoading(true);
+      const userCredential = await registerWithEmail(email, password, displayName);
+      // Fetch profile immediately after sign-up
+      const profile = await getUserProfile(userCredential.user.uid);
+      setUser(userCredential.user);
+      setUserProfile(profile);
+      setProfileLoading(false);
     } catch (err: unknown) {
+      setProfileLoading(false);
       const message = getErrorMessage(err);
       setError(message);
       throw new Error(message);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   const signInGoogle = useCallback(async () => {
     try {
       setError(null);
-      setLoading(true);
-      await signInWithGoogle();
+      setProfileLoading(true);
+      const userCredential = await signInWithGoogle();
+      // Fetch profile immediately after Google sign-in
+      const profile = await getUserProfile(userCredential.user.uid);
+      setUser(userCredential.user);
+      setUserProfile(profile);
+      setProfileLoading(false);
     } catch (err: unknown) {
+      setProfileLoading(false);
       const message = getErrorMessage(err);
       setError(message);
       throw new Error(message);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -137,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     userProfile,
     loading,
+    profileLoading,
     error,
     signIn,
     signUp,

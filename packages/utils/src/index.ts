@@ -185,15 +185,15 @@ export function getStatusLabel(status: IssueStatus): string {
 
 export function getIssueTypeLabel(type: IssueType): string {
   const labels: Record<IssueType, string> = {
-    POTHOLE: 'Pothole',
-    GARBAGE: 'Garbage Accumulation',
-    DRAINAGE: 'Drainage Issue',
-    ROAD_DAMAGE: 'Road Damage',
-    STREETLIGHT: 'Streetlight Problem',
-    WATER_SUPPLY: 'Water Supply Issue',
-    SEWAGE: 'Sewage Problem',
-    ENCROACHMENT: 'Encroachment',
-    OTHER: 'Other'
+    POTHOLE: 'Potholes & Road Damage',
+    GARBAGE: 'Littering/Garbage',
+    ILLEGAL_PARKING: 'Illegal Parking',
+    DAMAGED_SIGN: 'Broken Road Signs',
+    FALLEN_TREE: 'Fallen Trees',
+    VANDALISM: 'Vandalism/Graffiti',
+    DEAD_ANIMAL: 'Dead Animal Pollution',
+    DAMAGED_CONCRETE: 'Damaged Concrete Structures',
+    DAMAGED_ELECTRICAL: 'Damaged Electric Poles/Wires'
   };
   return labels[type];
 }
@@ -202,13 +202,13 @@ export function getIssueTypeIcon(type: IssueType): string {
   const icons: Record<IssueType, string> = {
     POTHOLE: '🕳️',
     GARBAGE: '🗑️',
-    DRAINAGE: '🚰',
-    ROAD_DAMAGE: '🛣️',
-    STREETLIGHT: '💡',
-    WATER_SUPPLY: '💧',
-    SEWAGE: '🚽',
-    ENCROACHMENT: '🚧',
-    OTHER: '📋'
+    ILLEGAL_PARKING: '🅿️',
+    DAMAGED_SIGN: '🚧',
+    FALLEN_TREE: '🌳',
+    VANDALISM: '🎨',
+    DEAD_ANIMAL: '🦴',
+    DAMAGED_CONCRETE: '🏗️',
+    DAMAGED_ELECTRICAL: '⚡'
   };
   return icons[type];
 }

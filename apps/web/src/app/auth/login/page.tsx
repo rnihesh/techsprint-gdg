@@ -32,22 +32,22 @@ const getRedirectPath = (role?: string) => {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, user, userProfile, loading: authLoading } = useAuth();
+  const { signIn, user, userProfile, loading: authLoading, profileLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  // Redirect if already logged in - use useEffect to avoid setState during render
+  // Redirect if already logged in - wait for profile to load before redirecting
   useEffect(() => {
-    if (user && !authLoading) {
-      router.push(getRedirectPath(userProfile?.role));
+    if (user && !authLoading && !profileLoading && userProfile) {
+      router.push(getRedirectPath(userProfile.role));
     }
-  }, [user, authLoading, userProfile, router]);
+  }, [user, authLoading, profileLoading, userProfile, router]);
 
-  // Show loading while checking auth or redirecting
-  if (authLoading || (user && !authLoading)) {
+  // Show loading while checking auth or loading profile or redirecting
+  if (authLoading || profileLoading || (user && userProfile)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

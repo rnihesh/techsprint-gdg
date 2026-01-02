@@ -256,29 +256,10 @@ router.post("/", async (req: Request, res: Response) => {
       }
     }
 
-    // Get administrative region from coordinates
-    let region = {
-      state: "Unknown",
-      district: "Unknown",
-      municipality: "Unknown",
-    };
-
-    try {
-      const adminRegion = await getAdministrativeRegion(latitude, longitude);
-      if (adminRegion) {
-        region = {
-          state: adminRegion.state || "Unknown",
-          district: adminRegion.district || "Unknown",
-          municipality: adminRegion.municipality || "Unknown",
-          ...(adminRegion.pincode && { pincode: adminRegion.pincode }),
-        };
-      }
-    } catch (err) {
-      console.warn("Failed to get administrative region:", err);
-    }
-
-    // Find the appropriate municipality based on location
+    // Find the appropriate municipality based on location first
+    // (so we can use its data as fallback for region)
     let municipalityId = "MUN-DEFAULT";
+    let municipalityData: { name?: string; district?: string; state?: string } | null = null;
     try {
       const municipalityMatch = await findMunicipalityForLocation(
         latitude,
@@ -290,9 +271,57 @@ router.post("/", async (req: Request, res: Response) => {
         console.log(
           `Issue assigned to municipality ${municipalityMatch.name} (${municipalityMatch.matchType})`
         );
+        
+        // Get municipality data for region fallback
+        const muniDoc = await db.collection(COLLECTIONS.MUNICIPALITIES).doc(municipalityId).get();
+        if (muniDoc.exists) {
+          const data = muniDoc.data();
+          municipalityData = {
+            name: data?.name || municipalityMatch.name,
+            district: data?.district,
+            state: data?.state,
+          };
+        }
       }
     } catch (err) {
       console.warn("Failed to find municipality for location:", err);
+    }
+
+    // Get administrative region from coordinates
+    let region = {
+      state: "Unknown",
+      district: "Unknown",
+      municipality: "Unknown",
+    };
+
+    try {
+      const adminRegion = await getAdministrativeRegion(latitude, longitude);
+      if (adminRegion && adminRegion.state) {
+        region = {
+          state: adminRegion.state || "Unknown",
+          district: adminRegion.district || "Unknown",
+          municipality: adminRegion.municipality || "Unknown",
+          ...(adminRegion.pincode && { pincode: adminRegion.pincode }),
+        };
+      } else if (municipalityData) {
+        // Fallback to municipality data if geocoding failed
+        console.log("Using municipality data as fallback for region");
+        region = {
+          state: municipalityData.state || "Unknown",
+          district: municipalityData.district || "Unknown",
+          municipality: municipalityData.name || "Unknown",
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to get administrative region:", err);
+      // Use municipality data as fallback
+      if (municipalityData) {
+        region = {
+          state: municipalityData.state || "Unknown",
+          district: municipalityData.district || "Unknown",
+          municipality: municipalityData.name || "Unknown",
+        };
+      }
     }
 
     const location: GeoLocation = {

@@ -72,7 +72,7 @@ const indianStates = [
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { signUp, user, loading: authLoading } = useAuth();
+  const { signUp, user, loading: authLoading, profileLoading, userProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
   const [showPassword, setShowPassword] = useState(false);
@@ -102,9 +102,9 @@ function RegisterForm() {
 
   // Handle redirects and step management for logged-in users
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || profileLoading) return;
 
-    if (user) {
+    if (user && userProfile) {
       if (isMunicipalityRegistration) {
         // User is logged in and wants to register municipality - skip to step 2
         if (step === 1) {
@@ -117,11 +117,17 @@ function RegisterForm() {
           }));
         }
       } else {
-        // Regular registration but already logged in - redirect to home
-        router.push("/");
+        // Regular registration but already logged in - redirect based on role
+        if (userProfile.role === "PLATFORM_MAINTAINER") {
+          router.push("/admin/dashboard");
+        } else if (userProfile.role === "MUNICIPALITY_USER") {
+          router.push("/municipality/issues");
+        } else {
+          router.push("/");
+        }
       }
     }
-  }, [user, authLoading, router, isMunicipalityRegistration, step]);
+  }, [user, userProfile, authLoading, profileLoading, router, isMunicipalityRegistration, step]);
 
   const handleGoogleSuccess = () => {
     toast.success("Account created!", {

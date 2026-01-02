@@ -10,6 +10,7 @@ import { authRoutes } from './routes/auth';
 import { adminRoutes } from './routes/admin';
 import { healthRoutes } from './routes/health';
 import { uploadRoutes } from './routes/upload';
+import { classifyRoutes } from './routes/classify';
 import { errorHandler } from './middleware/errorHandler';
 import { notFoundHandler } from './middleware/notFoundHandler';
 
@@ -33,6 +34,7 @@ app.use('/api/municipalities', municipalityRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/classify', classifyRoutes);
 
 // Error handling
 app.use(notFoundHandler);

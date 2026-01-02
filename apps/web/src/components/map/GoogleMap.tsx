@@ -11,6 +11,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
 
+// Libraries to load - must be consistent across all map components
+const libraries: ("places" | "geometry")[] = ["places"];
+
 interface Issue {
   id: string;
   description: string;
@@ -165,6 +168,7 @@ export function GoogleMapComponent({
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries,
   });
 
   const onLoad = useCallback((map: google.maps.Map) => {

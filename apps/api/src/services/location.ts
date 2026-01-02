@@ -5,6 +5,13 @@
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || '';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
+// Log API key status on startup
+if (!GOOGLE_MAPS_API_KEY) {
+  console.warn('⚠️ GOOGLE_MAPS_API_KEY is not set - geocoding will not work');
+} else {
+  console.log('✓ Google Maps API key loaded');
+}
+
 // Type definitions for Google Maps API response
 interface GeocodeResponse {
   status: string;
@@ -66,13 +73,20 @@ interface MunicipalityMatch {
  */
 export async function reverseGeocode(lat: number, lng: number): Promise<ReverseGeocodeResult | null> {
   try {
+    if (!GOOGLE_MAPS_API_KEY) {
+      console.error('Geocoding failed: GOOGLE_MAPS_API_KEY is not set');
+      return null;
+    }
+
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}&language=en&region=in`;
+    
+    console.log(`Geocoding coordinates: ${lat}, ${lng}`);
     
     const response = await fetch(url);
     const data = await response.json() as GeocodeResponse;
 
     if (data.status !== 'OK' || !data.results || data.results.length === 0) {
-      console.error('Geocoding failed:', data.status);
+      console.error('Geocoding API response error:', data.status, JSON.stringify(data).slice(0, 200));
       return null;
     }
 
@@ -109,6 +123,8 @@ export async function reverseGeocode(lat: number, lng: number): Promise<ReverseG
         country = component.long_name;
       }
     }
+
+    console.log(`Geocode result: state=${state}, district=${district}, city=${city}`);
 
     return {
       formattedAddress: result.formatted_address,

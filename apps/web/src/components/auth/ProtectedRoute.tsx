@@ -28,14 +28,14 @@ export function ProtectedRoute({
   requireAuth = true,
   redirectTo = "/auth/login",
 }: ProtectedRouteProps) {
-  const { user, userProfile, loading } = useAuth();
+  const { user, userProfile, loading, profileLoading } = useAuth();
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // Still loading auth state
-    if (loading) return;
+    // Still loading auth state or profile
+    if (loading || profileLoading) return;
 
     // Not logged in
     if (!user) {
@@ -83,6 +83,7 @@ export function ProtectedRoute({
     user,
     userProfile,
     loading,
+    profileLoading,
     allowedRoles,
     requireAuth,
     redirectTo,
@@ -90,7 +91,7 @@ export function ProtectedRoute({
   ]);
 
   // Show loading while checking
-  if (loading || isChecking) {
+  if (loading || profileLoading || isChecking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -101,15 +102,13 @@ export function ProtectedRoute({
     );
   }
 
-  // Not authorized - will be redirected
+  // Not authorized - will be redirected, show loading instead of unauthorized message
   if (!isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-          <ShieldAlert className="h-12 w-12 text-destructive" />
-          <p className="text-sm text-muted-foreground">
-            Unauthorized. Redirecting...
-          </p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Redirecting...</p>
         </div>
       </div>
     );
