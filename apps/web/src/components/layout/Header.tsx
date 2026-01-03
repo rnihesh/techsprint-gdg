@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
@@ -24,6 +24,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 // Navigation items for different user roles
 const getNavigation = (role: string | undefined) => {
@@ -57,6 +58,7 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, userProfile, signOut, loading, profileLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const isLoggedIn = !!user;
   const userRole = userProfile?.role;
@@ -102,15 +104,23 @@ export function Header() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              {item.name}
-            </Link>
-          ))}
+          {navigation.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  isActive 
+                    ? "text-primary font-semibold" 
+                    : "text-muted-foreground"
+                )}
+              >
+                {item.name}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Desktop Auth */}
@@ -156,14 +166,23 @@ export function Header() {
                 <div className="space-y-1">
                   {navigation.map((item) => {
                     const Icon = item.icon;
+                    const isActive = pathname === item.href;
                     return (
                       <Link
                         key={item.name}
                         href={item.href}
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-foreground/80 transition-all hover:bg-primary/10 hover:text-primary hover:translate-x-1 active:scale-[0.98]"
+                        className={cn(
+                          "flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all hover:bg-primary/10 hover:text-primary hover:translate-x-1 active:scale-[0.98]",
+                          isActive 
+                            ? "bg-primary/10 text-primary font-semibold" 
+                            : "text-foreground/80"
+                        )}
                       >
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                        <div className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-lg",
+                          isActive ? "bg-primary/20" : "bg-muted"
+                        )}>
                           <Icon className="h-5 w-5" />
                         </div>
                         <span>{item.name}</span>

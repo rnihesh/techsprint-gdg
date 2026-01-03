@@ -307,14 +307,16 @@ export default function LeaderboardPage() {
                     {filteredLeaderboard.map((entry) => (
                       <div
                         key={entry.rank}
-                        className="flex items-center gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                       >
                         {/* Rank Badge */}
-                        {getRankBadge(entry.rank)}
+                        <div className="shrink-0">
+                          {getRankBadge(entry.rank)}
+                        </div>
 
                         {/* Municipality Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2">
                             <h3 className="font-semibold truncate">
                               {entry.municipality.name}
                             </h3>
@@ -328,10 +330,31 @@ export default function LeaderboardPage() {
                             <MapPin className="h-3 w-3" />
                             <span>{entry.municipality.state}</span>
                           </div>
+                          {/* Issue Stats */}
+                          <div className="flex flex-wrap items-center gap-3 text-xs">
+                            <div className="flex items-center gap-1.5 text-green-600">
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              <span className="font-medium">{entry.municipality.resolvedIssues || 0} Closed</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-orange-600">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              <span className="font-medium">
+                                {(entry.municipality.totalIssues || 0) - (entry.municipality.resolvedIssues || 0)} Open
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-blue-600">
+                              <Star className="h-3.5 w-3.5" />
+                              <span className="font-medium">
+                                {entry.municipality.totalIssues ? 
+                                  Math.round(((entry.municipality.resolvedIssues || 0) / entry.municipality.totalIssues) * 100) 
+                                  : 0}% Resolution
+                              </span>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Score */}
-                        <div className="text-right shrink-0">
+                        <div className="text-right shrink-0 w-full sm:w-auto">
                           <div
                             className={`text-2xl font-bold ${getScoreColor(
                               entry.score
@@ -339,7 +362,7 @@ export default function LeaderboardPage() {
                           >
                             {entry.score}
                           </div>
-                          <div className="w-24 mt-1">
+                          <div className="w-full sm:w-24 mt-1">
                             <Progress value={entry.score} className="h-2" />
                           </div>
                         </div>

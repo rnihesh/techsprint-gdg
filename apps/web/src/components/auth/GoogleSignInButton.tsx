@@ -25,7 +25,8 @@ export function GoogleSignInButton({
     try {
       setIsLoading(true);
       const profile = await signInGoogle();
-      onSuccess?.(profile);
+      // Convert UserProfile to the expected callback type
+      onSuccess?.(profile ? { role: profile.role || undefined } : null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Google sign-in failed';
       onError?.(message);
