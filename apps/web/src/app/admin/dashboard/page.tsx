@@ -48,81 +48,32 @@ import {
   Plus,
   MapPin,
   Shield,
-  TrendingUp,
   RefreshCw,
   Trash2,
   Edit,
   Eye,
-  ArrowLeft,
   Image,
   ArrowRight,
-  Filter,
   List,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-
-interface AdminStats {
-  totalUsers: number;
-  totalMunicipalities: number;
-  totalIssues: number;
-  pendingRegistrations: number;
-  issuesByStatus: {
-    OPEN: number;
-    CLOSED: number;
-  };
-}
-
-interface Municipality {
-  id: string;
-  name: string;
-  type: string;
-  state: string;
-  district: string;
-  score: number;
-  totalIssues: number;
-  resolvedIssues: number;
-  bounds?: {
-    north: number;
-    south: number;
-    east: number;
-    west: number;
-  };
-}
-
-interface Issue {
-  id: string;
-  type: string;
-  description: string;
-  status: string;
-  location: {
-    latitude: number;
-    longitude: number;
-    address?: string;
-  };
-  imageUrls?: string[];
-  createdAt: string;
-  reportedBy: string;
-}
-
-interface Registration {
-  id: string;
-  name: string;
-  email: string;
-  municipalityName: string;
-  state: string;
-  district: string;
-  status: "PENDING" | "APPROVED" | "REJECTED";
-  createdAt: string;
-}
-
-interface User {
-  id: string;
-  email: string;
-  displayName: string;
-  role: string;
-  municipalityId?: string;
-  createdAt: string;
-}
+import {
+  AdminStats,
+  Municipality,
+  Issue,
+  Registration,
+  User,
+  ISSUE_TYPES,
+  INDIAN_STATES,
+  MUNICIPALITY_TYPES,
+  CreateMunicipalityDialog,
+  EditMunicipalityDialog,
+  DeleteMunicipalityDialog,
+  ViewIssueDialog,
+  EditIssueDialog,
+  DeleteIssueDialog,
+  RejectRegistrationDialog,
+} from "@/components/admin";
 
 function AdminDashboardContent() {
   const { getToken, userProfile } = useAuth();
@@ -592,19 +543,8 @@ function AdminDashboardContent() {
     }
   };
 
-  // Issue types constant
-  const issueTypes = [
-    "POTHOLE",
-    "GARBAGE",
-    "GRAFFITI",
-    "ILLEGAL_PARKING",
-    "DEAD_ANIMAL",
-    "FALLEN_TREE",
-    "DAMAGED_ROAD_SIGN",
-    "DAMAGED_ELECTRICAL_POLE",
-    "DAMAGED_CONCRETE",
-    "OTHER",
-  ];
+  // Issue types constant - using imported ISSUE_TYPES
+  const issueTypes = [...ISSUE_TYPES];
 
   useEffect(() => {
     fetchData();
@@ -957,37 +897,8 @@ function AdminDashboardContent() {
     }
   };
 
-  const indianStates = [
-    "Andhra Pradesh",
-    "Arunachal Pradesh",
-    "Assam",
-    "Bihar",
-    "Chhattisgarh",
-    "Delhi",
-    "Goa",
-    "Gujarat",
-    "Haryana",
-    "Himachal Pradesh",
-    "Jharkhand",
-    "Karnataka",
-    "Kerala",
-    "Madhya Pradesh",
-    "Maharashtra",
-    "Manipur",
-    "Meghalaya",
-    "Mizoram",
-    "Nagaland",
-    "Odisha",
-    "Punjab",
-    "Rajasthan",
-    "Sikkim",
-    "Tamil Nadu",
-    "Telangana",
-    "Tripura",
-    "Uttar Pradesh",
-    "Uttarakhand",
-    "West Bengal",
-  ];
+  // Indian states constant - using imported INDIAN_STATES
+  const indianStates = [...INDIAN_STATES];
 
   if (loading) {
     return (
@@ -1141,37 +1052,40 @@ function AdminDashboardContent() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 w-full flex-wrap h-auto">
-            <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="municipalities" className="text-xs md:text-sm">
+          <TabsList className="mb-4 w-full grid grid-cols-5 sm:flex sm:flex-wrap h-auto gap-1">
+            <TabsTrigger value="overview" className="text-xs md:text-sm px-2 sm:px-3">
+              <span className="hidden sm:inline">Overview</span>
+              <span className="sm:hidden">Home</span>
+            </TabsTrigger>
+            <TabsTrigger value="municipalities" className="text-xs md:text-sm px-2 sm:px-3">
               <span className="hidden sm:inline">Municipalities</span>
               <span className="sm:hidden">Munis</span>
               {muniTotal > 0 && (
-                <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
+                <Badge variant="secondary" className="ml-1 text-xs hidden md:inline-flex">
                   {muniTotal}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="registrations" className="text-xs md:text-sm">
+            <TabsTrigger value="registrations" className="text-xs md:text-sm px-2 sm:px-3">
               <span className="hidden sm:inline">Registrations</span>
               <span className="sm:hidden">Regs</span>
               {registrations.length > 0 && (
-                <Badge variant="destructive" className="ml-1 md:ml-2 text-xs">
+                <Badge variant="destructive" className="ml-1 text-xs">
                   {registrations.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="users" className="text-xs md:text-sm">
+            <TabsTrigger value="users" className="text-xs md:text-sm px-2 sm:px-3">
               Users
               {userTotal > 0 && (
-                <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
+                <Badge variant="secondary" className="ml-1 text-xs hidden md:inline-flex">
                   {userTotal}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger 
               value="issues" 
-              className="text-xs md:text-sm"
+              className="text-xs md:text-sm px-2 sm:px-3"
               onClick={() => {
                 if (allIssues.length === 0) {
                   fetchAllIssues(1);
@@ -1181,7 +1095,7 @@ function AdminDashboardContent() {
               <span className="hidden sm:inline">All Issues</span>
               <span className="sm:hidden">Issues</span>
               {allIssuesTotal > 0 && (
-                <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
+                <Badge variant="secondary" className="ml-1 text-xs hidden md:inline-flex">
                   {allIssuesTotal}
                 </Badge>
               )}
@@ -1190,13 +1104,13 @@ function AdminDashboardContent() {
 
           {/* Municipalities Tab */}
           <TabsContent value="municipalities" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search municipalities..."
-                    className="pl-9 w-64"
+                    className="pl-9 w-full sm:w-64"
                     value={searchQuery}
                     onChange={(e) => handleMuniSearch(e.target.value)}
                   />
@@ -1210,7 +1124,7 @@ function AdminDashboardContent() {
                 onOpenChange={setShowCreateDialog}
               >
                 <DialogTrigger asChild>
-                  <Button>
+                  <Button className="w-full sm:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Municipality
                   </Button>
@@ -1370,47 +1284,48 @@ function AdminDashboardContent() {
               {municipalities.map((municipality) => (
                   <Card key={municipality.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div 
                           className="flex items-center gap-4 flex-1 cursor-pointer"
                           onClick={() => fetchMunicipalityIssues(municipality)}
                         >
-                          <div className="p-2 rounded-lg bg-primary/10">
+                          <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
                             <Building2 className="h-6 w-6 text-primary" />
                           </div>
-                          <div>
-                            <h3 className="font-semibold">
+                          <div className="min-w-0">
+                            <h3 className="font-semibold truncate">
                               {municipality.name}
                             </h3>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground truncate">
                               <MapPin className="inline h-3 w-3 mr-1" />
                               {municipality.district}, {municipality.state}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                          <div className="text-center sm:text-right">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               Score
                             </p>
-                            <p className="text-xl font-bold text-primary">
+                            <p className="text-lg sm:text-xl font-bold text-primary">
                               {municipality.score}
                             </p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">
+                          <div className="text-center sm:text-right">
+                            <p className="text-xs sm:text-sm text-muted-foreground">
                               Issues
                             </p>
-                            <p className="text-lg font-semibold">
+                            <p className="text-base sm:text-lg font-semibold">
                               {municipality.resolvedIssues}/
                               {municipality.totalIssues}
                             </p>
                           </div>
-                          <Badge>{municipality.type.replace(/_/g, " ")}</Badge>
-                          <div className="flex items-center gap-2 ml-2">
+                          <Badge className="text-xs">{municipality.type.replace(/_/g, " ")}</Badge>
+                          <div className="flex items-center gap-1 sm:gap-2 ml-auto lg:ml-2">
                             <Button
                               variant="outline"
                               size="icon"
+                              className="h-8 w-8"
                               onClick={() => fetchMunicipalityIssues(municipality)}
                               title="View Issues"
                             >
@@ -1419,6 +1334,7 @@ function AdminDashboardContent() {
                             <Button
                               variant="outline"
                               size="icon"
+                              className="h-8 w-8"
                               onClick={() => openEditDialog(municipality)}
                               title="Edit Municipality"
                             >
@@ -1427,7 +1343,7 @@ function AdminDashboardContent() {
                             <Button
                               variant="outline"
                               size="icon"
-                              className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                              className="h-8 w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                               onClick={() => setDeleteDialog({ open: true, municipality })}
                               title="Delete Municipality"
                             >
@@ -1598,55 +1514,20 @@ function AdminDashboardContent() {
               </CardContent>
             </Card>
 
-            {/* Reject Dialog */}
-            <Dialog
+            {/* Reject Dialog - Using extracted component */}
+            <RejectRegistrationDialog
               open={rejectDialog.open}
-              onOpenChange={(open) =>
-                setRejectDialog((prev) => ({ ...prev, open }))
-              }
-            >
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Reject Registration</DialogTitle>
-                  <DialogDescription>
-                    Please provide a reason for rejecting this registration
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <Textarea
-                    placeholder="Rejection reason..."
-                    value={rejectDialog.reason}
-                    onChange={(e) =>
-                      setRejectDialog((prev) => ({
-                        ...prev,
-                        reason: e.target.value,
-                      }))
-                    }
-                    rows={3}
-                  />
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setRejectDialog({
-                        open: false,
-                        registrationId: "",
-                        reason: "",
-                      })
-                    }
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleRejectRegistration}
-                  >
-                    Reject Registration
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              reason={rejectDialog.reason}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setRejectDialog({ open: false, registrationId: "", reason: "" });
+                } else {
+                  setRejectDialog((prev) => ({ ...prev, open }));
+                }
+              }}
+              onReasonChange={(reason) => setRejectDialog((prev) => ({ ...prev, reason }))}
+              onConfirm={handleRejectRegistration}
+            />
           </TabsContent>
 
           {/* Users Tab */}
@@ -2223,179 +2104,72 @@ function AdminDashboardContent() {
           </TabsContent>
         </Tabs>
 
-        {/* Delete Municipality Dialog */}
-        <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, municipality: deleteDialog.municipality })}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                Delete Municipality
-              </DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete <strong>{deleteDialog.municipality?.name}</strong>? 
-                This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteDialog({ open: false, municipality: null })}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDeleteMunicipality}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Delete Municipality Dialog - Using extracted component */}
+        <DeleteMunicipalityDialog
+          open={deleteDialog.open}
+          municipality={deleteDialog.municipality}
+          onOpenChange={(open) => setDeleteDialog({ open, municipality: open ? deleteDialog.municipality : null })}
+          onConfirm={handleDeleteMunicipality}
+        />
 
-        {/* Edit Municipality Dialog */}
-        <Dialog open={editDialog.open} onOpenChange={(open) => setEditDialog({ open, municipality: editDialog.municipality })}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Edit Municipality</DialogTitle>
-              <DialogDescription>
-                Update municipality information
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Municipality Name</Label>
-                <Input
-                  value={editForm.name}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, name: e.target.value }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select
-                    value={editForm.type}
-                    onValueChange={(value) => setEditForm(prev => ({ ...prev, type: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="MUNICIPAL_CORPORATION">Municipal Corporation</SelectItem>
-                      <SelectItem value="MUNICIPALITY">Municipality</SelectItem>
-                      <SelectItem value="NAGAR_PANCHAYAT">Nagar Panchayat</SelectItem>
-                      <SelectItem value="GRAM_PANCHAYAT">Gram Panchayat</SelectItem>
-                      <SelectItem value="CANTONMENT_BOARD">Cantonment Board</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>State</Label>
-                  <Select
-                    value={editForm.state}
-                    onValueChange={(value) => setEditForm(prev => ({ ...prev, state: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select state" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {indianStates.map((state) => (
-                        <SelectItem key={state} value={state}>
-                          {state}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>District</Label>
-                <Input
-                  value={editForm.district}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, district: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Jurisdiction Bounds (Coordinates)</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    placeholder="North (lat)"
-                    value={editForm.north}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, north: e.target.value }))}
-                  />
-                  <Input
-                    placeholder="South (lat)"
-                    value={editForm.south}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, south: e.target.value }))}
-                  />
-                  <Input
-                    placeholder="East (lng)"
-                    value={editForm.east}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, east: e.target.value }))}
-                  />
-                  <Input
-                    placeholder="West (lng)"
-                    value={editForm.west}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, west: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialog({ open: false, municipality: null })}>
-                Cancel
-              </Button>
-              <Button onClick={handleEditMunicipality}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Edit Municipality Dialog - Using extracted component */}
+        <EditMunicipalityDialog
+          open={editDialog.open}
+          municipality={editDialog.municipality}
+          onOpenChange={(open) => setEditDialog({ open, municipality: open ? editDialog.municipality : null })}
+          form={editForm}
+          setForm={setEditForm}
+          onSubmit={handleEditMunicipality}
+        />
 
         {/* Municipality Detail / Issues View Dialog */}
         <Dialog 
           open={selectedMunicipality !== null} 
           onOpenChange={(open) => !open && setSelectedMunicipality(null)}
         >
-          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-primary" />
-                {selectedMunicipality?.name}
+          <DialogContent className="w-[calc(100%-1rem)] sm:max-w-xl md:max-w-2xl lg:max-w-4xl max-h-[85vh] overflow-y-auto">
+            <DialogHeader className="space-y-1">
+              <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Building2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                <span className="truncate">{selectedMunicipality?.name}</span>
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm">
                 <MapPin className="inline h-3 w-3 mr-1" />
                 {selectedMunicipality?.district}, {selectedMunicipality?.state}
               </DialogDescription>
             </DialogHeader>
 
             {/* Municipality Stats */}
-            <div className="grid grid-cols-3 gap-4 py-4">
-              <Card>
-                <CardContent className="pt-4">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 py-2 sm:py-4">
+              <Card className="p-0 shadow-sm">
+                <CardContent className="p-2 sm:p-4 sm:pt-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-primary">{selectedMunicipality?.score}</p>
-                    <p className="text-sm text-muted-foreground">Score</p>
+                    <p className="text-base sm:text-2xl font-bold text-primary">{selectedMunicipality?.score}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Score</p>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="pt-4">
+              <Card className="p-0 shadow-sm">
+                <CardContent className="p-2 sm:p-4 sm:pt-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold">{selectedMunicipality?.totalIssues || 0}</p>
-                    <p className="text-sm text-muted-foreground">Total Issues</p>
+                    <p className="text-base sm:text-2xl font-bold">{selectedMunicipality?.totalIssues || 0}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Issues</p>
                   </div>
                 </CardContent>
               </Card>
-              <Card>
-                <CardContent className="pt-4">
+              <Card className="p-0 shadow-sm">
+                <CardContent className="p-2 sm:p-4 sm:pt-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">{selectedMunicipality?.resolvedIssues || 0}</p>
-                    <p className="text-sm text-muted-foreground">Resolved</p>
+                    <p className="text-base sm:text-2xl font-bold text-green-600">{selectedMunicipality?.resolvedIssues || 0}</p>
+                    <p className="text-[10px] sm:text-sm text-muted-foreground">Resolved</p>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
             {/* Resolution Rate */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span>Resolution Rate</span>
                 <span className="font-medium">
                   {selectedMunicipality?.totalIssues 
@@ -2407,13 +2181,13 @@ function AdminDashboardContent() {
                 value={selectedMunicipality?.totalIssues 
                   ? (selectedMunicipality.resolvedIssues / selectedMunicipality.totalIssues) * 100 
                   : 0} 
-                className="h-2" 
+                className="h-1.5 sm:h-2" 
               />
             </div>
 
             {/* Issues List */}
-            <div className="space-y-4 mt-4">
-              <h4 className="font-semibold flex items-center gap-2">
+            <div className="space-y-2 sm:space-y-4 mt-2 sm:mt-4">
+              <h4 className="font-semibold flex items-center gap-2 text-sm sm:text-base">
                 <FileText className="h-4 w-4" />
                 Issues ({municipalityIssues.length})
               </h4>
@@ -2421,46 +2195,46 @@ function AdminDashboardContent() {
               {issuesLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
-                    <Skeleton key={i} className="h-20" />
+                    <Skeleton key={i} className="h-16 sm:h-20" />
                   ))}
                 </div>
               ) : municipalityIssues.length === 0 ? (
-                <div className="py-8 text-center text-muted-foreground">
-                  <FileText className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                  <p>No issues reported for this municipality</p>
+                <div className="py-4 sm:py-8 text-center text-muted-foreground">
+                  <FileText className="h-8 w-8 sm:h-10 sm:w-10 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No issues reported for this municipality</p>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                <div className="space-y-2 sm:space-y-3 max-h-[200px] sm:max-h-[300px] overflow-y-auto">
                   {municipalityIssues.map((issue) => (
-                    <Card key={issue.id} className="p-4">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex gap-3">
+                    <Card key={issue.id} className="p-2 sm:p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                        <div className="flex gap-2 sm:gap-3">
                           {issue.imageUrls && issue.imageUrls.length > 0 ? (
                             <img 
                               src={issue.imageUrls[0]} 
                               alt="Issue" 
-                              className="w-16 h-16 object-cover rounded-md"
+                              className="w-10 h-10 sm:w-16 sm:h-16 object-cover rounded-md flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-muted rounded-md flex items-center justify-center">
-                              <Image className="h-6 w-6 text-muted-foreground" />
+                            <div className="w-10 h-10 sm:w-16 sm:h-16 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
+                              <Image className="h-4 w-4 sm:h-6 sm:w-6 text-muted-foreground" />
                             </div>
                           )}
-                          <div>
-                            <p className="font-medium">{issue.type.replace(/_/g, " ")}</p>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{issue.description}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-xs sm:text-base truncate">{issue.type.replace(/_/g, " ")}</p>
+                            <p className="text-[10px] sm:text-sm text-muted-foreground line-clamp-1 sm:line-clamp-2">{issue.description}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">
                               {new Date(issue.createdAt).toLocaleDateString()}
                               {issue.location?.address && ` • ${issue.location.address}`}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 sm:gap-2 justify-end">
                           <Select
                             value={issue.status}
                             onValueChange={(value) => handleUpdateIssueStatus(issue.id, value)}
                           >
-                            <SelectTrigger className="w-28">
+                            <SelectTrigger className="w-20 sm:w-28 h-7 sm:h-9 text-[10px] sm:text-sm">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -2471,10 +2245,10 @@ function AdminDashboardContent() {
                           <Button
                             variant="outline"
                             size="icon"
-                            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                            className="h-7 w-7 sm:h-8 sm:w-8 text-destructive hover:bg-destructive hover:text-destructive-foreground"
                             onClick={() => handleDeleteIssue(issue.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -2484,339 +2258,62 @@ function AdminDashboardContent() {
               )}
             </div>
 
-            <DialogFooter className="mt-4">
+            <DialogFooter className="mt-2 sm:mt-4 flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => openEditDialog(selectedMunicipality!)}
+                className="w-full sm:w-auto text-xs sm:text-sm"
               >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Municipality
+                <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Edit
               </Button>
               <Button
                 variant="destructive"
+                size="sm"
+                className="w-full sm:w-auto text-xs sm:text-sm"
                 onClick={() => {
                   setSelectedMunicipality(null);
                   setDeleteDialog({ open: true, municipality: selectedMunicipality });
                 }}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Municipality
+                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                Delete
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* View Issue Dialog */}
-        <Dialog 
-          open={viewIssueDialog.open} 
-          onOpenChange={(open) => setViewIssueDialog({ open, issue: viewIssueDialog.issue })}
-        >
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                Issue Details
-              </DialogTitle>
-            </DialogHeader>
-            {viewIssueDialog.issue && (
-              <div className="space-y-4">
-                {/* Issue Image */}
-                {viewIssueDialog.issue.imageUrls && viewIssueDialog.issue.imageUrls.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {viewIssueDialog.issue.imageUrls.map((url, i) => (
-                      <img 
-                        key={i}
-                        src={url} 
-                        alt={`Issue image ${i + 1}`} 
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                )}
+        {/* View Issue Dialog - Using extracted component */}
+        <ViewIssueDialog
+          open={viewIssueDialog.open}
+          issue={viewIssueDialog.issue}
+          onOpenChange={(open) => setViewIssueDialog({ open, issue: open ? viewIssueDialog.issue : null })}
+          onEdit={() => {
+            setViewIssueDialog({ open: false, issue: null });
+            if (viewIssueDialog.issue) {
+              openEditIssueDialog(viewIssueDialog.issue);
+            }
+          }}
+        />
 
-                {/* Issue Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Type</Label>
-                    <p className="font-medium">{viewIssueDialog.issue.type?.replace(/_/g, " ")}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Status</Label>
-                    <Badge
-                      variant={
-                        viewIssueDialog.issue.status === "OPEN"
-                          ? "destructive"
-                          : "secondary"
-                      }
-                      className="mt-1"
-                    >
-                      {viewIssueDialog.issue.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Reported On</Label>
-                    <p className="font-medium">
-                      {viewIssueDialog.issue.createdAt
-                        ? new Date(viewIssueDialog.issue.createdAt).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
-                        : "Unknown"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Reported By</Label>
-                    <p className="font-medium">{viewIssueDialog.issue.reportedBy || "Anonymous"}</p>
-                  </div>
-                </div>
+        {/* Edit Issue Dialog - Using extracted component */}
+        <EditIssueDialog
+          open={editIssueDialog.open}
+          issue={editIssueDialog.issue}
+          onOpenChange={(open) => setEditIssueDialog({ open, issue: open ? editIssueDialog.issue : null })}
+          form={editIssueForm}
+          setForm={setEditIssueForm}
+          onSubmit={handleEditIssue}
+        />
 
-                <div>
-                  <Label className="text-muted-foreground">Description</Label>
-                  <p className="mt-1">{viewIssueDialog.issue.description}</p>
-                </div>
-
-                {viewIssueDialog.issue.location && (
-                  <div>
-                    <Label className="text-muted-foreground">Location</Label>
-                    <p className="flex items-center gap-1 mt-1">
-                      <MapPin className="h-4 w-4" />
-                      {viewIssueDialog.issue.location.address || 
-                        `${viewIssueDialog.issue.location.latitude}, ${viewIssueDialog.issue.location.longitude}`}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setViewIssueDialog({ open: false, issue: null })}
-              >
-                Close
-              </Button>
-              <Button
-                onClick={() => {
-                  setViewIssueDialog({ open: false, issue: null });
-                  if (viewIssueDialog.issue) {
-                    openEditIssueDialog(viewIssueDialog.issue);
-                  }
-                }}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Issue
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Edit Issue Dialog */}
-        <Dialog 
-          open={editIssueDialog.open} 
-          onOpenChange={(open) => setEditIssueDialog({ open, issue: editIssueDialog.issue })}
-        >
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Edit className="h-5 w-5" />
-                Edit Issue
-              </DialogTitle>
-              <DialogDescription>
-                Update issue details including status, type, description, location, and images
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              {/* Status and Type Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <Select
-                    value={editIssueForm.status}
-                    onValueChange={(value) => setEditIssueForm(prev => ({ ...prev, status: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="OPEN">Open</SelectItem>
-                      <SelectItem value="CLOSED">Closed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Type</Label>
-                  <Select
-                    value={editIssueForm.type}
-                    onValueChange={(value) => setEditIssueForm(prev => ({ ...prev, type: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {issueTypes.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type.replace(/_/g, " ")}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label>Description</Label>
-                <Textarea
-                  value={editIssueForm.description}
-                  onChange={(e) => setEditIssueForm(prev => ({ ...prev, description: e.target.value }))}
-                  rows={4}
-                />
-              </div>
-
-              {/* Location Section */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Location</Label>
-                <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground">Address</Label>
-                  <Input
-                    value={editIssueForm.address}
-                    onChange={(e) => setEditIssueForm(prev => ({ ...prev, address: e.target.value }))}
-                    placeholder="Enter address"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Latitude</Label>
-                    <Input
-                      type="number"
-                      step="any"
-                      value={editIssueForm.latitude}
-                      onChange={(e) => setEditIssueForm(prev => ({ ...prev, latitude: e.target.value }))}
-                      placeholder="e.g., 28.6139"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Longitude</Label>
-                    <Input
-                      type="number"
-                      step="any"
-                      value={editIssueForm.longitude}
-                      onChange={(e) => setEditIssueForm(prev => ({ ...prev, longitude: e.target.value }))}
-                      placeholder="e.g., 77.2090"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Images Section */}
-              <div className="space-y-3">
-                <Label className="text-base font-semibold">Images</Label>
-                {editIssueForm.imageUrls.length > 0 ? (
-                  <div className="grid grid-cols-3 gap-2">
-                    {editIssueForm.imageUrls.map((url, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={url}
-                          alt={`Issue image ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg"
-                        />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => {
-                            setEditIssueForm(prev => ({
-                              ...prev,
-                              imageUrls: prev.imageUrls.filter((_, i) => i !== index)
-                            }));
-                          }}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No images attached</p>
-                )}
-                <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground">Add Image URL</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="newImageUrl"
-                      placeholder="https://example.com/image.jpg"
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const input = document.getElementById("newImageUrl") as HTMLInputElement;
-                        if (input?.value?.trim()) {
-                          setEditIssueForm(prev => ({
-                            ...prev,
-                            imageUrls: [...prev.imageUrls, input.value.trim()]
-                          }));
-                          input.value = "";
-                        }
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditIssueDialog({ open: false, issue: null })}>
-                Cancel
-              </Button>
-              <Button onClick={handleEditIssue}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Issue Dialog */}
-        <Dialog 
-          open={deleteIssueDialog.open} 
-          onOpenChange={(open) => setDeleteIssueDialog({ open, issue: deleteIssueDialog.issue })}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                Delete Issue
-              </DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this issue? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            {deleteIssueDialog.issue && (
-              <div className="py-4">
-                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                  <p><strong>Type:</strong> {deleteIssueDialog.issue.type?.replace(/_/g, " ")}</p>
-                  <p><strong>Status:</strong> {deleteIssueDialog.issue.status}</p>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {deleteIssueDialog.issue.description}
-                  </p>
-                </div>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleteIssueDialog({ open: false, issue: null })}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={handleDeleteIssueFromAll}>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Issue
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Delete Issue Dialog - Using extracted component */}
+        <DeleteIssueDialog
+          open={deleteIssueDialog.open}
+          issue={deleteIssueDialog.issue}
+          onOpenChange={(open) => setDeleteIssueDialog({ open, issue: open ? deleteIssueDialog.issue : null })}
+          onConfirm={handleDeleteIssueFromAll}
+        />
       </main>
       <Footer />
     </div>

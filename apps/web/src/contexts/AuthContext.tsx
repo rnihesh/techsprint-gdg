@@ -21,9 +21,9 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<UserProfile | null>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
-  signInGoogle: () => Promise<void>;
+  signInGoogle: () => Promise<UserProfile | null>;
   signOut: () => Promise<void>;
   resetUserPassword: (email: string) => Promise<void>;
   getToken: () => Promise<string | null>;
@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string): Promise<UserProfile | null> => {
     try {
       setError(null);
       setProfileLoading(true);
@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userCredential.user);
       setUserProfile(profile);
       setProfileLoading(false);
+      return profile;
     } catch (err: unknown) {
       setProfileLoading(false);
       const message = getErrorMessage(err);
@@ -105,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signInGoogle = useCallback(async () => {
+  const signInGoogle = useCallback(async (): Promise<UserProfile | null> => {
     try {
       setError(null);
       setProfileLoading(true);
@@ -115,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(userCredential.user);
       setUserProfile(profile);
       setProfileLoading(false);
+      return profile;
     } catch (err: unknown) {
       setProfileLoading(false);
       const message = getErrorMessage(err);

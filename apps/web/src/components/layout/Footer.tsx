@@ -13,16 +13,16 @@ export function Footer() {
   return (
     <footer className="border-t bg-muted/50">
       <div className="container px-4 py-6 md:py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center sm:text-left">
           {/* Brand - Always visible */}
-          <div className="space-y-3 md:space-y-4">
+          <div className="space-y-3 md:space-y-4 flex flex-col items-center sm:items-start">
             <Link href="/" className="flex items-center space-x-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <MapPin className="h-5 w-5" />
               </div>
               <span className="font-bold text-lg md:text-xl">CivicLemma</span>
             </Link>
-            <p className="text-xs md:text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground max-w-xs">
               Empowering citizens to report civic issues and hold municipalities
               accountable.
             </p>

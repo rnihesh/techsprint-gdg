@@ -21,7 +21,7 @@ import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 // Helper function to redirect based on role
 const getRedirectPath = (role?: string) => {
-  if (role === "PLATFORM_MAINTAINER") {
+  if (role === "PLATFORM_MAINTAINER" || role === "admin") {
     return "/admin/dashboard";
   }
   if (role === "MUNICIPALITY_USER") {
@@ -48,7 +48,9 @@ export default function LoginPage() {
   // Redirect if already logged in - wait for profile to load before redirecting
   useEffect(() => {
     if (user && !authLoading && !profileLoading && userProfile) {
-      router.push(getRedirectPath(userProfile.role ?? undefined));
+      const redirectPath = getRedirectPath(userProfile.role ?? undefined);
+      console.log("Already logged in, redirecting to:", redirectPath);
+      router.replace(redirectPath);
     }
   }, [user, authLoading, profileLoading, userProfile, router]);
 
@@ -66,26 +68,32 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await signIn(formData.email, formData.password);
+      const profile = await signIn(formData.email, formData.password);
       toast.success("Login successful!", {
         description: "Welcome back!",
       });
-      // Will be redirected by the auth state change
+      // Redirect immediately using the returned profile
+      const redirectPath = getRedirectPath(profile?.role ?? undefined);
+      console.log("Login successful, redirecting to:", redirectPath, "Role:", profile?.role);
+      router.replace(redirectPath);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Login failed";
       toast.error("Login failed", {
         description: message,
       });
-    } finally {
       setIsLoading(false);
     }
+    // Don't set isLoading to false on success - keep showing loader while redirecting
   };
 
-  const handleGoogleSuccess = () => {
+  const handleGoogleSuccess = (profile: { role?: string } | null) => {
     toast.success("Login successful!", {
       description: "Welcome back!",
     });
-    // Will be redirected by the auth state change
+    // Redirect immediately using the returned profile
+    const redirectPath = getRedirectPath(profile?.role ?? undefined);
+    console.log("Google login successful, redirecting to:", redirectPath, "Role:", profile?.role);
+    router.replace(redirectPath);
   };
 
   const handleGoogleError = (error: string) => {

@@ -129,7 +129,7 @@ function RegisterForm() {
     }
   }, [user, userProfile, authLoading, profileLoading, router, isMunicipalityRegistration, step]);
 
-  const handleGoogleSuccess = () => {
+  const handleGoogleSuccess = (profile: { role?: string } | null) => {
     toast.success("Account created!", {
       description: "Welcome to CivicLemma!",
     });
@@ -138,7 +138,14 @@ function RegisterForm() {
       // For municipality registration, they need to complete the form
       setStep(2);
     } else {
-      router.push("/");
+      // Regular users go to home, special roles go to their dashboards
+      if (profile?.role === "PLATFORM_MAINTAINER") {
+        router.push("/admin/dashboard");
+      } else if (profile?.role === "MUNICIPALITY_USER") {
+        router.push("/municipality/issues");
+      } else {
+        router.push("/");
+      }
     }
   };
 

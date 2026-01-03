@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 interface GoogleSignInButtonProps {
-  onSuccess?: () => void;
+  onSuccess?: (profile: { role?: string } | null) => void;
   onError?: (error: string) => void;
   className?: string;
   variant?: 'default' | 'outline' | 'ghost';
@@ -24,14 +24,14 @@ export function GoogleSignInButton({
   const handleGoogleSignIn = async () => {
     try {
       setIsLoading(true);
-      await signInGoogle();
-      onSuccess?.();
+      const profile = await signInGoogle();
+      onSuccess?.(profile);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Google sign-in failed';
       onError?.(message);
-    } finally {
       setIsLoading(false);
     }
+    // Don't set isLoading to false on success - keep showing loader while redirecting
   };
 
   return (

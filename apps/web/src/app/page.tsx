@@ -42,11 +42,14 @@ export default function HomePage() {
   // Redirect municipality/admin users to their dashboards
   useEffect(() => {
     if (!authLoading && !profileLoading && user && userProfile) {
-      if (userProfile.role === "PLATFORM_MAINTAINER") {
+      console.log("Home page - User role:", userProfile.role);
+      if (userProfile.role === "PLATFORM_MAINTAINER" || userProfile.role === "admin") {
+        console.log("Redirecting admin to dashboard...");
         router.replace("/admin/dashboard");
         return;
       }
       if (userProfile.role === "MUNICIPALITY_USER") {
+        console.log("Redirecting municipality to issues...");
         router.replace("/municipality/issues");
         return;
       }
@@ -73,6 +76,7 @@ export default function HomePage() {
     user &&
     userProfile &&
     (userProfile.role === "PLATFORM_MAINTAINER" ||
+      userProfile.role === "admin" ||
       userProfile.role === "MUNICIPALITY_USER");
   const isCheckingAuth =
     authLoading || profileLoading || (user && !userProfile);
