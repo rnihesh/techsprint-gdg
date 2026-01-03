@@ -10,6 +10,7 @@ import {
 } from "@react-google-maps/api";
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
+import { config } from "@/lib/config";
 
 // Libraries to load - must be consistent across all map components
 const libraries: ("places" | "geometry")[] = ["places"];
@@ -59,10 +60,7 @@ const containerStyle = {
   height: "100%",
 };
 
-const defaultCenter = {
-  lat: 12.9716, // Bangalore
-  lng: 77.5946,
-};
+const defaultCenter = config.map.defaultCenter;
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: false,

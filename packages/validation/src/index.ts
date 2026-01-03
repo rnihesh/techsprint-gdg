@@ -113,9 +113,16 @@ export const respondToIssueInputSchema = z.object({
     .max(1000, "Resolution note must be less than 1000 characters"),
 });
 
+// Helper to handle query params that can be string or string[]
+const stringOrArraySchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+  z.union([
+    z.array(itemSchema),
+    itemSchema.transform((val) => [val]),
+  ]).optional();
+
 export const issueFiltersSchema = z.object({
-  status: z.array(issueStatusSchema).optional(),
-  type: z.array(issueTypeSchema).optional(),
+  status: stringOrArraySchema(issueStatusSchema),
+  type: stringOrArraySchema(issueTypeSchema),
   municipalityId: z.string().optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),

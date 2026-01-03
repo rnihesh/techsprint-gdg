@@ -1,5 +1,6 @@
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+import { config } from "./config";
+
+const API_BASE_URL = config.api.baseUrl;
 
 interface ApiOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

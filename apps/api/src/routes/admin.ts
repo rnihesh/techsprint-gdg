@@ -799,6 +799,106 @@ router.put(
 // ISSUE MANAGEMENT (Admin)
 // ============================================
 
+// Update an issue (full update)
+router.put(
+  "/issues/:id",
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const db = getAdminDb();
+      const { id } = req.params;
+      const { description, status, type, location, imageUrls } = req.body;
+
+      const docRef = db.collection(COLLECTIONS.ISSUES).doc(id);
+      const doc = await docRef.get();
+
+      if (!doc.exists) {
+        return res.status(404).json({
+          success: false,
+          data: null,
+          error: "Issue not found",
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      const issueData = doc.data()!;
+      const previousStatus = issueData.status;
+      const municipalityId = issueData.municipalityId;
+
+      const updateData: Record<string, unknown> = {
+        updatedAt: new Date(),
+      };
+
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+      if (type !== undefined) {
+        updateData.type = type;
+        updateData.classifiedType = type;
+      }
+      if (location !== undefined) {
+        updateData.location = {
+          ...issueData.location,
+          ...location,
+        };
+      }
+      if (imageUrls !== undefined && Array.isArray(imageUrls)) {
+        updateData.imageUrls = imageUrls;
+      }
+      if (status !== undefined) {
+        if (!["OPEN", "CLOSED"].includes(status)) {
+          return res.status(400).json({
+            success: false,
+            data: null,
+            error: "Invalid status. Must be OPEN or CLOSED",
+            timestamp: new Date().toISOString(),
+          });
+        }
+        updateData.status = status;
+      }
+
+      await docRef.update(updateData);
+
+      // Update municipality stats if status changed
+      if (status && status !== previousStatus && municipalityId) {
+        const muniRef = db.collection(COLLECTIONS.MUNICIPALITIES).doc(municipalityId);
+        const muniDoc = await muniRef.get();
+        if (muniDoc.exists) {
+          const muniData = muniDoc.data()!;
+          let resolvedChange = 0;
+
+          if (status === "CLOSED" && previousStatus !== "CLOSED") {
+            resolvedChange = 1;
+          } else if (status !== "CLOSED" && previousStatus === "CLOSED") {
+            resolvedChange = -1;
+          }
+
+          if (resolvedChange !== 0) {
+            await muniRef.update({
+              resolvedIssues: Math.max(0, (muniData.resolvedIssues || 0) + resolvedChange),
+              updatedAt: new Date(),
+            });
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        data: { id, ...updateData },
+        error: null,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error updating issue:", error?.message || String(error));
+      res.status(500).json({
+        success: false,
+        data: null,
+        error: "Failed to update issue",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+);
+
 // Delete an issue
 router.delete(
   "/issues/:id",
@@ -964,15 +1064,15 @@ router.get("/stats", async (req: AuthenticatedRequest, res: Response) => {
     const issuesSnapshot = await db.collection(COLLECTIONS.ISSUES).get();
     const statusBreakdown = {
       OPEN: 0,
-      RESPONDED: 0,
-      VERIFIED: 0,
-      NEEDS_MANUAL_REVIEW: 0,
+      CLOSED: 0,
     };
 
     issuesSnapshot.docs.forEach((doc) => {
       const status = doc.data().status;
-      if (status in statusBreakdown) {
-        statusBreakdown[status as keyof typeof statusBreakdown]++;
+      if (status === "OPEN") {
+        statusBreakdown.OPEN++;
+      } else if (status === "CLOSED") {
+        statusBreakdown.CLOSED++;
       }
     });
 

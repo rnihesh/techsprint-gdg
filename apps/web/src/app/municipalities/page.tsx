@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
+import { AdminOnly } from "@/components/auth/ProtectedRoute";
 import { municipalitiesApi } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,6 +27,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
+  ArrowRight,
+  ExternalLink,
 } from "lucide-react";
 
 interface Municipality {
@@ -93,19 +98,20 @@ export default function MunicipalitiesPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-muted/30">
-      <Header />
+    <AdminOnly>
+      <div className="min-h-screen flex flex-col bg-muted/30">
+        <Header />
 
-      <main className="flex-1 container py-8 px-4">
-        <div className="max-w-6xl mx-auto">
-          {/* Page Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Municipalities</h1>
-            <p className="text-muted-foreground">
-              Browse registered municipalities and their performance in
-              resolving civic issues.
-            </p>
-          </div>
+        <main className="flex-1 container py-8 px-4">
+          <div className="max-w-6xl mx-auto">
+            {/* Page Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold mb-2">Municipalities</h1>
+              <p className="text-muted-foreground">
+                Browse registered municipalities and their performance in
+                resolving civic issues.
+              </p>
+            </div>
 
           {/* Search */}
           <div className="relative max-w-md mx-auto mb-8">
@@ -219,21 +225,33 @@ export default function MunicipalitiesPage() {
 
       <Footer />
     </div>
+    </AdminOnly>
   );
 }
 
 function MunicipalityCard({ municipality }: { municipality: Municipality }) {
+  const router = useRouter();
   const resolutionRate = getResolutionRate(
     municipality.resolvedIssues,
     municipality.totalIssues
   );
 
+  const handleViewIssues = () => {
+    // Navigate to admin dashboard with municipality pre-selected
+    router.push(`/admin/dashboard?tab=issues&municipality=${municipality.id}`);
+  };
+
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card 
+      className="hover:shadow-lg transition-shadow cursor-pointer group"
+      onClick={handleViewIssues}
+    >
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg">{municipality.name}</CardTitle>
+            <CardTitle className="text-lg group-hover:text-primary transition-colors">
+              {municipality.name}
+            </CardTitle>
             <CardDescription className="flex items-center gap-1 mt-1">
               <MapPin className="h-3 w-3" />
               {municipality.region || municipality.district || ""}
@@ -256,7 +274,10 @@ function MunicipalityCard({ municipality }: { municipality: Municipality }) {
         {/* Contact Info */}
         <div className="space-y-2 text-sm">
           {municipality.contactEmail && (
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div 
+              className="flex items-center gap-2 text-muted-foreground"
+              onClick={(e) => e.stopPropagation()}
+            >
               <Mail className="h-4 w-4" />
               <a
                 href={`mailto:${municipality.contactEmail}`}
@@ -267,7 +288,10 @@ function MunicipalityCard({ municipality }: { municipality: Municipality }) {
             </div>
           )}
           {municipality.contactPhone && (
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <div 
+              className="flex items-center gap-2 text-muted-foreground"
+              onClick={(e) => e.stopPropagation()}
+            >
               <Phone className="h-4 w-4" />
               <a
                 href={`tel:${municipality.contactPhone}`}
@@ -295,6 +319,12 @@ function MunicipalityCard({ municipality }: { municipality: Municipality }) {
             <span>{municipality.resolvedIssues || 0} resolved</span>
             <span>{municipality.totalIssues || 0} total</span>
           </div>
+        </div>
+
+        {/* View Issues Link */}
+        <div className="pt-2 border-t flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">View all issues</span>
+          <ArrowRight className="h-4 w-4 text-primary group-hover:translate-x-1 transition-transform" />
         </div>
       </CardContent>
     </Card>

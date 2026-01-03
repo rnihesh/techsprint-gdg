@@ -4,6 +4,7 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import { AlertTriangle, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { config } from "@/lib/config";
 
 interface MapPickerProps {
   onLocationSelect: (location: { lat: number; lng: number }) => void;
@@ -19,10 +20,7 @@ const containerStyle = {
   height: "100%",
 };
 
-const defaultCenter = {
-  lat: 12.9716, // Bangalore
-  lng: 77.5946,
-};
+const defaultCenter = config.map.defaultCenter;
 
 const mapOptions: google.maps.MapOptions = {
   disableDefaultUI: false,
@@ -60,7 +58,7 @@ export function MapPicker({
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: "google-map-script",
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    googleMapsApiKey: config.map.googleMapsApiKey,
     libraries,
   });
 

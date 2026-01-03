@@ -30,7 +30,9 @@ export const ML_CLASS_TO_ISSUE_TYPE: Record<string, string> = {
 };
 
 // ML API URL (Python Flask server running the TensorFlow model)
-const ML_API_URL = process.env.NEXT_PUBLIC_ML_API_URL || "http://localhost:3002";
+import { config } from "./config";
+
+const ML_API_URL = config.api.mlUrl;
 
 // Confidence thresholds
 const CONFIDENCE_THRESHOLD = 0.70;

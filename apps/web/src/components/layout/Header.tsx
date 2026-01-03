@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import {
   Menu,
   MapPin,
@@ -28,9 +28,10 @@ import { toast } from "sonner";
 // Navigation items for different user roles
 const getNavigation = (role: string | undefined) => {
   if (role === "PLATFORM_MAINTAINER" || role === "admin") {
-    // Admin: management pages only
+    // Admin: full access to all management pages plus map view
     return [
       { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
+      { name: "Map View", href: "/map", icon: MapPin },
       { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
       { name: "Municipalities", href: "/municipalities", icon: Building2 },
     ];
@@ -44,12 +45,11 @@ const getNavigation = (role: string | undefined) => {
     ];
   }
 
-  // Citizen or not logged in: report issue, map view, leaderboard
+  // Citizen or not logged in: report issue, map view, leaderboard (no municipalities)
   return [
     { name: "Report Issue", href: "/report", icon: FileText },
     { name: "Map View", href: "/map", icon: MapPin },
     { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
-    { name: "Municipalities", href: "/municipalities", icon: Building2 },
   ];
 };
 
@@ -131,59 +131,85 @@ export function Header() {
         {/* Mobile Menu */}
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild className="md:hidden">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Open menu">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px]">
-            <nav className="flex flex-col space-y-4 mt-8">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center space-x-3 text-lg font-medium text-muted-foreground hover:text-primary"
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-              <hr className="my-4" />
-              {loading ? (
-                <div className="flex justify-center">
-                  <Loader2 className="h-5 w-5 animate-spin" />
+          <SheetContent side="left" className="w-[300px] p-0 border-r-0">
+            <div className="flex flex-col h-full bg-gradient-to-b from-background to-muted/20">
+              {/* Header */}
+              <div className="flex items-center gap-3 p-5 border-b bg-primary/5">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
+                  <MapPin className="h-6 w-6" />
                 </div>
-              ) : isLoggedIn ? (
-                <>
-                  <Link
-                    href="/profile"
-                    onClick={() => setIsOpen(false)}
-                    className="flex items-center space-x-3 text-lg font-medium text-muted-foreground hover:text-primary"
-                  >
-                    <User className="h-5 w-5" />
-                    <span>Profile</span>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
+                <div>
+                  <SheetTitle className="text-xl font-bold tracking-tight">CivicLemma</SheetTitle>
+                  <p className="text-xs text-muted-foreground">Civic Issue Platform</p>
+                </div>
+              </div>
+              
+              {/* Navigation */}
+              <nav className="flex-1 overflow-y-auto py-4 px-3">
+                <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Navigation
+                </p>
+                <div className="space-y-1">
+                  {navigation.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-foreground/80 transition-all hover:bg-primary/10 hover:text-primary hover:translate-x-1 active:scale-[0.98]"
+                      >
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </nav>
+              
+              {/* Footer */}
+              <div className="border-t bg-muted/30 p-4 space-y-2">
+                {loading ? (
+                  <div className="flex justify-center py-3">
+                    <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                  </div>
+                ) : isLoggedIn ? (
+                  <>
+                    <Link
+                      href="/profile"
+                      onClick={() => setIsOpen(false)}
+                      className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-foreground/80 transition-all hover:bg-primary/10 hover:text-primary"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                        <User className="h-5 w-5" />
+                      </div>
+                      <span>Profile</span>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      className="w-full h-11 justify-start gap-3 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <Button asChild className="w-full h-11 justify-start gap-3 rounded-xl shadow-md">
+                    <Link href="/auth/login" onClick={() => setIsOpen(false)}>
+                      <LogIn className="h-4 w-4" />
+                      Sign In
+                    </Link>
                   </Button>
-                </>
-              ) : (
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/auth/login" onClick={() => setIsOpen(false)}>
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Sign In
-                  </Link>
-                </Button>
-              )}
-            </nav>
+                )}
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
       </div>

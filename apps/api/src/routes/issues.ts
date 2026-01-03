@@ -69,52 +69,64 @@ router.get("/", async (req: Request, res: Response) => {
     const { page, pageSize } = paginationSchema.parse(req.query);
     const filters = issueFiltersSchema.parse(req.query);
 
-    let query = db.collection(COLLECTIONS.ISSUES).orderBy("createdAt", "desc");
-
-    // Apply filters
-    if (filters.status && filters.status.length > 0) {
-      query = query.where("status", "in", filters.status);
-    }
-    if (filters.type && filters.type.length > 0) {
-      query = query.where("type", "in", filters.type);
-    }
+    const hasStatusFilter = filters.status && filters.status.length > 0;
+    const hasTypeFilter = filters.type && filters.type.length > 0;
+    
+    // Due to Firestore composite index requirements, we'll fetch all and filter in memory
+    // for better reliability. In production, deploy firestore.indexes.json to enable
+    // server-side filtering.
+    let query: FirebaseFirestore.Query = db.collection(COLLECTIONS.ISSUES)
+      .orderBy("createdAt", "desc");
+    
     if (filters.municipalityId) {
       query = query.where("municipalityId", "==", filters.municipalityId);
     }
 
-    // Pagination
-    const offset = (page - 1) * pageSize;
-    const snapshot = await query.limit(pageSize).offset(offset).get();
+    // Fetch a larger batch to allow for filtering
+    const snapshot = await query.limit(500).get();
 
-    const issues = snapshot.docs.map((doc) => ({
+    let issues = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt?.toDate(),
       updatedAt: doc.data().updatedAt?.toDate(),
-    }));
+    })) as any[];
+    
+    // Apply filters in memory
+    if (hasStatusFilter) {
+      issues = issues.filter((issue) => filters.status!.includes(issue.status));
+    }
+    
+    if (hasTypeFilter) {
+      issues = issues.filter((issue) => filters.type!.includes(issue.type));
+    }
 
-    // Get total count
-    const countSnapshot = await db.collection(COLLECTIONS.ISSUES).count().get();
-    const total = countSnapshot.data().count;
+    // Get total count for the filtered results
+    const total = issues.length;
+    
+    // Apply pagination
+    const offset = (page - 1) * pageSize;
+    const paginatedIssues = issues.slice(offset, offset + pageSize);
 
     res.json({
       success: true,
       data: {
-        items: issues,
+        items: paginatedIssues,
         total,
         page,
         pageSize,
-        hasMore: offset + issues.length < total,
+        hasMore: offset + paginatedIssues.length < total,
       },
       error: null,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
     console.error("Error fetching issues:", error?.message || String(error));
+    console.error("Full error:", error);
     res.status(500).json({
       success: false,
       data: null,
-      error: "Failed to fetch issues",
+      error: "Failed to fetch issues: " + (error?.message || String(error)),
       timestamp: new Date().toISOString(),
     });
   }
@@ -280,12 +292,12 @@ router.post("/", async (req: Request, res: Response) => {
     const { latitude, longitude } = input.location;
 
     // Classify issue type using Gemini (if type not provided)
-    let classifiedType = input.type || "OTHER";
+    let classifiedType: Issue["type"] = input.type || "POTHOLE";
     if (!input.type) {
       try {
         const classification = await classifyIssueWithGemini(input.description);
         if (classification && classification.confidence > 0.7) {
-          classifiedType = classification.type as any;
+          classifiedType = classification.type as Issue["type"];
           console.log(
             `Issue classified as ${classifiedType} with confidence ${classification.confidence}`
           );

@@ -240,10 +240,10 @@ export default function MapPage() {
       <main className="flex-1 flex flex-col">
         {/* Filters Bar */}
         <div className="border-b bg-background sticky top-16 z-40">
-          <div className="container px-4 py-4">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="container px-4 py-3 md:py-4">
+            <div className="flex flex-col gap-3 md:gap-4">
               {/* Search */}
-              <div className="relative w-full md:w-96">
+              <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search issues or locations..."
@@ -254,14 +254,14 @@ export default function MapPage() {
               </div>
 
               {/* Filters */}
-              <div className="flex flex-wrap gap-3 items-center">
+              <div className="flex flex-wrap gap-2 md:gap-3 items-center">
                 <Select
                   value={filters.type}
                   onValueChange={(value) =>
                     setFilters((prev) => ({ ...prev, type: value }))
                   }
                 >
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-full sm:w-[150px]">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
@@ -280,7 +280,7 @@ export default function MapPage() {
                     setFilters((prev) => ({ ...prev, status: value }))
                   }
                 >
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-full sm:w-[150px]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -293,24 +293,24 @@ export default function MapPage() {
                 </Select>
 
                 {/* View Toggle */}
-                <div className="flex border rounded-lg overflow-hidden">
+                <div className="flex border rounded-lg overflow-hidden w-full sm:w-auto">
                   <Button
                     variant={viewMode === "map" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("map")}
-                    className="rounded-none"
+                    className="rounded-none flex-1 sm:flex-none"
                   >
                     <MapIcon className="h-4 w-4 mr-1" />
-                    Map
+                    <span className="text-xs md:text-sm">Map</span>
                   </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("list")}
-                    className="rounded-none"
+                    className="rounded-none flex-1 sm:flex-none"
                   >
                     <List className="h-4 w-4 mr-1" />
-                    List
+                    <span className="text-xs md:text-sm">List</span>
                   </Button>
                 </div>
               </div>
@@ -379,8 +379,8 @@ export default function MapPage() {
             </div>
           ) : (
             /* List View */
-            <div className="container px-4 py-6">
-              <div className="grid gap-4">
+            <div className="container px-4 py-4 md:py-6">
+              <div className="grid gap-3 md:gap-4">
                 {isLoading ? (
                   Array(4)
                     .fill(0)
@@ -416,26 +416,25 @@ export default function MapPage() {
                       key={issue.id}
                       className="hover:shadow-md transition-shadow cursor-pointer"
                     >
-                      <CardContent className="p-6">
-                        <div className="flex gap-4">
+                      <CardContent className="p-3 md:p-6">
+                        <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                           {/* Thumbnail */}
                           {issue.imageUrls && issue.imageUrls.length > 0 ? (
                             <img
                               src={issue.imageUrls[0]}
                               alt="Issue"
-                              className="h-20 w-20 object-cover rounded-lg shrink-0"
+                              className="w-full sm:w-20 sm:h-20 h-40 object-cover rounded-lg sm:shrink-0"
                             />
                           ) : (
-                            <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center shrink-0">
+                            <div className="w-full sm:w-20 sm:h-20 h-40 bg-muted rounded-lg flex items-center justify-center sm:shrink-0">
                               <MapPin className="h-8 w-8 text-muted-foreground" />
                             </div>
                           )}
 
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <h3 className="font-semibold truncate">
-                                {issue.description.slice(0, 50)}
-                                {issue.description.length > 50 ? "..." : ""}
+                            <div className="flex flex-col sm:flex-row items-start justify-between gap-2 mb-2">
+                              <h3 className="font-semibold text-sm md:text-base line-clamp-2">
+                                {issue.description}
                               </h3>
                               <div className="flex items-center gap-2 shrink-0">
                                 {getStatusIcon(issue.status)}
@@ -443,17 +442,19 @@ export default function MapPage() {
                               </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mb-2">
+                            <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground mb-2">
                               {getTypeBadge(issue.type)}
-                              <span>•</span>
-                              <span>{issue.createdAt}</span>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="text-xs">
+                                {new Date(issue.createdAt).toLocaleDateString()}
+                              </span>
                             </div>
 
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
+                            <div className="flex items-center gap-1 text-xs md:text-sm text-muted-foreground">
+                              <MapPin className="h-3 w-3 shrink-0" />
                               <span className="truncate">
                                 {issue.location.address ||
-                                  `${issue.location.latitude}, ${issue.location.longitude}`}
+                                  `${issue.location.latitude.toFixed(4)}, ${issue.location.longitude.toFixed(4)}`}
                               </span>
                             </div>
                           </div>

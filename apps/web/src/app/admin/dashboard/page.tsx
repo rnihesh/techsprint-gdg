@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { AdminOnly } from "@/components/auth/ProtectedRoute";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,9 @@ import {
   Eye,
   ArrowLeft,
   Image,
+  ArrowRight,
+  Filter,
+  List,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
@@ -122,6 +126,7 @@ interface User {
 
 function AdminDashboardContent() {
   const { getToken, userProfile } = useAuth();
+  const searchParams = useSearchParams();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [municipalities, setMunicipalities] = useState<Municipality[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
@@ -129,6 +134,7 @@ function AdminDashboardContent() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [searchQuery, setSearchQuery] = useState("");
+  const [initialParamsProcessed, setInitialParamsProcessed] = useState(false);
 
   // Pagination for municipalities
   const [muniPage, setMuniPage] = useState(1);
@@ -203,6 +209,58 @@ function AdminDashboardContent() {
   const [municipalityIssues, setMunicipalityIssues] = useState<Issue[]>([]);
   const [issuesLoading, setIssuesLoading] = useState(false);
 
+  // All Issues state
+  const [allIssues, setAllIssues] = useState<Issue[]>([]);
+  const [allIssuesLoading, setAllIssuesLoading] = useState(false);
+  const [allIssuesPage, setAllIssuesPage] = useState(1);
+  const [allIssuesTotalPages, setAllIssuesTotalPages] = useState(1);
+  const [allIssuesTotal, setAllIssuesTotal] = useState(0);
+  const ALL_ISSUES_PAGE_SIZE = 20;
+  const [issueSearchQuery, setIssueSearchQuery] = useState("");
+  const [issueStatusFilter, setIssueStatusFilter] = useState<string>("all");
+  const [issueTypeFilter, setIssueTypeFilter] = useState<string>("all");
+  const [issueMunicipalityFilter, setIssueMunicipalityFilter] = useState<string>("all");
+  
+  // All municipalities for filter (separate from paginated list)
+  const [allMunicipalitiesForFilter, setAllMunicipalitiesForFilter] = useState<Municipality[]>([]);
+  const [muniFilterSearch, setMuniFilterSearch] = useState("");
+
+  // Edit Issue dialog
+  const [editIssueDialog, setEditIssueDialog] = useState<{
+    open: boolean;
+    issue: Issue | null;
+  }>({
+    open: false,
+    issue: null,
+  });
+  const [editIssueForm, setEditIssueForm] = useState({
+    description: "",
+    status: "",
+    type: "",
+    address: "",
+    latitude: "",
+    longitude: "",
+    imageUrls: [] as string[],
+  });
+
+  // Delete Issue dialog
+  const [deleteIssueDialog, setDeleteIssueDialog] = useState<{
+    open: boolean;
+    issue: Issue | null;
+  }>({
+    open: false,
+    issue: null,
+  });
+
+  // View Issue dialog
+  const [viewIssueDialog, setViewIssueDialog] = useState<{
+    open: boolean;
+    issue: Issue | null;
+  }>({
+    open: false,
+    issue: null,
+  });
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -213,7 +271,7 @@ function AdminDashboardContent() {
       };
 
       // Fetch stats
-      const statsRes = await fetch("http://localhost:3001/api/admin/stats", {
+      const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin/stats`, {
         headers,
       });
       if (statsRes.ok) {
@@ -223,10 +281,13 @@ function AdminDashboardContent() {
 
       // Fetch municipalities with pagination
       await fetchMunicipalities(token, 1);
+      
+      // Fetch ALL municipalities for filter dropdown (up to 500)
+      await fetchAllMunicipalitiesForFilter(token);
 
       // Fetch pending registrations
       const regRes = await fetch(
-        "http://localhost:3001/api/admin/registrations?status=PENDING",
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/registrations?status=PENDING`,
         { headers }
       );
       if (regRes.ok) {
@@ -249,7 +310,7 @@ function AdminDashboardContent() {
     try {
       const tkn = token || await getToken();
       const searchParam = search !== undefined ? search : searchQuery;
-      const url = new URL("http://localhost:3001/api/admin/municipalities");
+      const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/admin/municipalities`);
       url.searchParams.set("page", page.toString());
       url.searchParams.set("pageSize", MUNI_PAGE_SIZE.toString());
       if (searchParam) {
@@ -276,6 +337,39 @@ function AdminDashboardContent() {
     }
   };
 
+  // Fetch ALL municipalities for filter dropdown (no pagination)
+  const fetchAllMunicipalitiesForFilter = async (token: string | null) => {
+    try {
+      const tkn = token || await getToken();
+      const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/admin/municipalities`);
+      url.searchParams.set("page", "1");
+      url.searchParams.set("pageSize", "500"); // Get all municipalities
+
+      const muniRes = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${tkn}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (muniRes.ok) {
+        const muniData = await muniRes.json();
+        if (muniData.success) {
+          setAllMunicipalitiesForFilter(muniData.data.items || []);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching all municipalities for filter:", error);
+    }
+  };
+
+  // Get filtered municipalities for dropdown
+  const filteredMunicipalitiesForDropdown = allMunicipalitiesForFilter.filter((muni) =>
+    muniFilterSearch.trim() === "" || 
+    muni.name.toLowerCase().includes(muniFilterSearch.toLowerCase()) ||
+    muni.state?.toLowerCase().includes(muniFilterSearch.toLowerCase()) ||
+    muni.district?.toLowerCase().includes(muniFilterSearch.toLowerCase())
+  );
+
   // Fetch users with pagination and filters
   const fetchUsers = async (token: string | null, page: number, search?: string, role?: string) => {
     try {
@@ -283,7 +377,7 @@ function AdminDashboardContent() {
       const searchParam = search !== undefined ? search : userSearchQuery;
       const roleParam = role !== undefined ? role : userRoleFilter;
       
-      const url = new URL("http://localhost:3001/api/admin/users");
+      const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/admin/users`);
       url.searchParams.set("page", page.toString());
       url.searchParams.set("pageSize", USER_PAGE_SIZE.toString());
       if (searchParam) {
@@ -330,15 +424,216 @@ function AdminDashboardContent() {
     fetchUsers(null, 1, userSearchQuery, role);
   };
 
+  // Fetch all issues with filters
+  const fetchAllIssues = async (
+    page: number = 1,
+    search?: string,
+    status?: string,
+    type?: string,
+    municipalityId?: string
+  ) => {
+    setAllIssuesLoading(true);
+    try {
+      const token = await getToken();
+      const searchParam = search !== undefined ? search : issueSearchQuery;
+      const statusParam = status !== undefined ? status : issueStatusFilter;
+      const typeParam = type !== undefined ? type : issueTypeFilter;
+      const muniParam = municipalityId !== undefined ? municipalityId : issueMunicipalityFilter;
+      
+      const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/issues`);
+      url.searchParams.set("page", page.toString());
+      url.searchParams.set("pageSize", ALL_ISSUES_PAGE_SIZE.toString());
+      
+      if (searchParam && searchParam.trim()) {
+        url.searchParams.set("search", searchParam.trim());
+      }
+      if (statusParam && statusParam !== "all") {
+        url.searchParams.set("status", statusParam);
+      }
+      if (typeParam && typeParam !== "all") {
+        url.searchParams.set("type", typeParam);
+      }
+      if (muniParam && muniParam !== "all") {
+        url.searchParams.set("municipalityId", muniParam);
+      }
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setAllIssues(data.data?.items || []);
+        setAllIssuesTotal(data.data?.total || 0);
+        setAllIssuesTotalPages(Math.ceil((data.data?.total || 0) / ALL_ISSUES_PAGE_SIZE));
+        setAllIssuesPage(page);
+      }
+    } catch (error) {
+      console.error("Error fetching all issues:", error);
+      toast.error("Failed to fetch issues");
+    } finally {
+      setAllIssuesLoading(false);
+    }
+  };
+
+  // Handle issue search
+  const handleIssueSearch = (query: string) => {
+    setIssueSearchQuery(query);
+    fetchAllIssues(1, query);
+  };
+
+  // Handle issue status filter
+  const handleIssueStatusFilter = (status: string) => {
+    setIssueStatusFilter(status);
+    fetchAllIssues(1, issueSearchQuery, status);
+  };
+
+  // Handle issue type filter
+  const handleIssueTypeFilter = (type: string) => {
+    setIssueTypeFilter(type);
+    fetchAllIssues(1, issueSearchQuery, issueStatusFilter, type);
+  };
+
+  // Handle issue municipality filter
+  const handleIssueMunicipalityFilter = (municipalityId: string) => {
+    setIssueMunicipalityFilter(municipalityId);
+    fetchAllIssues(1, issueSearchQuery, issueStatusFilter, issueTypeFilter, municipalityId);
+  };
+
+  // Open edit issue dialog
+  const openEditIssueDialog = (issue: Issue) => {
+    setEditIssueForm({
+      description: issue.description,
+      status: issue.status,
+      type: issue.type,
+      address: issue.location?.address || "",
+      latitude: issue.location?.latitude?.toString() || "",
+      longitude: issue.location?.longitude?.toString() || "",
+      imageUrls: issue.imageUrls || [],
+    });
+    setEditIssueDialog({ open: true, issue });
+  };
+
+  // Handle edit issue
+  const handleEditIssue = async () => {
+    if (!editIssueDialog.issue) return;
+
+    try {
+      const token = await getToken();
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/issues/${editIssueDialog.issue.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            description: editIssueForm.description,
+            status: editIssueForm.status,
+            type: editIssueForm.type,
+            location: {
+              address: editIssueForm.address,
+              latitude: parseFloat(editIssueForm.latitude) || 0,
+              longitude: parseFloat(editIssueForm.longitude) || 0,
+            },
+            imageUrls: editIssueForm.imageUrls,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success("Issue updated successfully");
+        setEditIssueDialog({ open: false, issue: null });
+        fetchAllIssues(allIssuesPage);
+        fetchData();
+      } else {
+        toast.error(data.error || "Failed to update issue");
+      }
+    } catch (error) {
+      console.error("Error updating issue:", error);
+      toast.error("Failed to update issue");
+    }
+  };
+
+  // Handle delete issue from all issues tab
+  const handleDeleteIssueFromAll = async () => {
+    if (!deleteIssueDialog.issue) return;
+
+    try {
+      const token = await getToken();
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/issues/${deleteIssueDialog.issue.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.success) {
+        toast.success("Issue deleted successfully");
+        setDeleteIssueDialog({ open: false, issue: null });
+        fetchAllIssues(allIssuesPage);
+        fetchData();
+      } else {
+        toast.error(data.error || "Failed to delete issue");
+      }
+    } catch (error) {
+      console.error("Error deleting issue:", error);
+      toast.error("Failed to delete issue");
+    }
+  };
+
+  // Issue types constant
+  const issueTypes = [
+    "POTHOLE",
+    "GARBAGE",
+    "GRAFFITI",
+    "ILLEGAL_PARKING",
+    "DEAD_ANIMAL",
+    "FALLEN_TREE",
+    "DAMAGED_ROAD_SIGN",
+    "DAMAGED_ELECTRICAL_POLE",
+    "DAMAGED_CONCRETE",
+    "OTHER",
+  ];
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Handle URL query params for deep linking
+  useEffect(() => {
+    if (!loading && !initialParamsProcessed) {
+      const tab = searchParams.get("tab");
+      const municipality = searchParams.get("municipality");
+      
+      if (tab === "issues") {
+        setActiveTab("issues");
+        if (municipality) {
+          setIssueMunicipalityFilter(municipality);
+          fetchAllIssues(1, "", "all", "all", municipality);
+        } else {
+          fetchAllIssues(1);
+        }
+      }
+      setInitialParamsProcessed(true);
+    }
+  }, [loading, initialParamsProcessed, searchParams]);
 
   const handleCreateMunicipality = async () => {
     try {
       const token = await getToken();
       const response = await fetch(
-        "http://localhost:3001/api/admin/municipalities",
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/municipalities`,
         {
           method: "POST",
           headers: {
@@ -388,7 +683,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/admin/registrations/${registrationId}/approve`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/registrations/${registrationId}/approve`,
         {
           method: "POST",
           headers: {
@@ -421,7 +716,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/admin/registrations/${rejectDialog.registrationId}/reject`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/registrations/${rejectDialog.registrationId}/reject`,
         {
           method: "POST",
           headers: {
@@ -454,7 +749,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/admin/users/${userId}/role`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/users/${userId}/role`,
         {
           method: "PUT",
           headers: {
@@ -485,7 +780,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/admin/municipalities/${deleteDialog.municipality.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/municipalities/${deleteDialog.municipality.id}`,
         {
           method: "DELETE",
           headers: {
@@ -516,7 +811,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/admin/municipalities/${editDialog.municipality.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/municipalities/${editDialog.municipality.id}`,
         {
           method: "PUT",
           headers: {
@@ -574,7 +869,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/issues?municipalityId=${municipality.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/issues?municipalityId=${municipality.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -604,7 +899,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/admin/issues/${issueId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/issues/${issueId}`,
         {
           method: "DELETE",
           headers: {
@@ -635,7 +930,7 @@ function AdminDashboardContent() {
     try {
       const token = await getToken();
       const response = await fetch(
-        `http://localhost:3001/api/admin/issues/${issueId}/status`,
+        `${process.env.NEXT_PUBLIC_API_URL}/admin/issues/${issueId}/status`,
         {
           method: "PUT",
           headers: {
@@ -716,59 +1011,59 @@ function AdminDashboardContent() {
   return (
     <div className="min-h-screen flex flex-col bg-muted/30">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
+      <main className="flex-1 container mx-auto px-4 py-4 md:py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+              <Shield className="h-6 w-6 md:h-8 md:w-8 text-primary" />
               Admin Dashboard
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               Manage municipalities, users, and platform settings
             </p>
           </div>
-          <Button onClick={fetchData} variant="outline" size="sm">
+          <Button onClick={fetchData} variant="outline" size="sm" className="w-full sm:w-auto">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium">Total Users</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalUsers || 0}</div>
+              <div className="text-xl md:text-2xl font-bold">{stats?.totalUsers || 0}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium">
                 Municipalities
               </CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-xl md:text-2xl font-bold">
                 {stats?.totalMunicipalities || 0}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium">
                 Total Issues
               </CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-xl md:text-2xl font-bold">
                 {stats?.totalIssues || 0}
               </div>
             </CardContent>
@@ -777,14 +1072,14 @@ function AdminDashboardContent() {
           <Card
             className={stats?.pendingRegistrations ? "border-yellow-500" : ""}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
               <CardTitle className="text-sm font-medium">
                 Pending Registrations
               </CardTitle>
               <Clock className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-xl md:text-2xl font-bold">
                 {stats?.pendingRegistrations || 0}
               </div>
             </CardContent>
@@ -793,23 +1088,51 @@ function AdminDashboardContent() {
 
         {/* Issue Status Breakdown */}
         {stats?.issuesByStatus && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-lg">Issue Status Breakdown</CardTitle>
+          <Card className="mb-6 md:mb-8">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base md:text-lg">Issue Status Breakdown</CardTitle>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  setActiveTab("issues");
+                  fetchAllIssues(1);
+                }}
+                className="text-primary"
+              >
+                View All
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <span className="text-sm">
+              <div className="grid grid-cols-2 gap-3 md:gap-4">
+                <div 
+                  className="flex items-center gap-2 cursor-pointer hover:bg-muted p-2 rounded-md transition-colors"
+                  onClick={() => {
+                    setActiveTab("issues");
+                    setIssueStatusFilter("OPEN");
+                    fetchAllIssues(1, "", "OPEN");
+                  }}
+                >
+                  <div className="w-3 h-3 rounded-full bg-red-500 flex-shrink-0" />
+                  <span className="text-xs md:text-sm">
                     Open: {stats.issuesByStatus.OPEN}
                   </span>
+                  <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                  <span className="text-sm">
-                    Closed: {stats.issuesByStatus.CLOSED}
+                <div 
+                  className="flex items-center gap-2 cursor-pointer hover:bg-muted p-2 rounded-md transition-colors"
+                  onClick={() => {
+                    setActiveTab("issues");
+                    setIssueStatusFilter("CLOSED");
+                    fetchAllIssues(1, "", "CLOSED");
+                  }}
+                >
+                  <div className="w-3 h-3 rounded-full bg-green-500 flex-shrink-0" />
+                  <span className="text-xs md:text-sm">
+                    Closed: {stats.issuesByStatus.CLOSED || 0}
                   </span>
+                  <ArrowRight className="h-3 w-3 ml-auto text-muted-foreground" />
                 </div>
               </div>
             </CardContent>
@@ -818,29 +1141,48 @@ function AdminDashboardContent() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="municipalities">
-              Municipalities
+          <TabsList className="mb-4 w-full flex-wrap h-auto">
+            <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="municipalities" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Municipalities</span>
+              <span className="sm:hidden">Munis</span>
               {muniTotal > 0 && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
                   {muniTotal}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="registrations">
-              Registrations
+            <TabsTrigger value="registrations" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Registrations</span>
+              <span className="sm:hidden">Regs</span>
               {registrations.length > 0 && (
-                <Badge variant="destructive" className="ml-2">
+                <Badge variant="destructive" className="ml-1 md:ml-2 text-xs">
                   {registrations.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="users">
+            <TabsTrigger value="users" className="text-xs md:text-sm">
               Users
               {userTotal > 0 && (
-                <Badge variant="secondary" className="ml-2">
+                <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
                   {userTotal}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="issues" 
+              className="text-xs md:text-sm"
+              onClick={() => {
+                if (allIssues.length === 0) {
+                  fetchAllIssues(1);
+                }
+              }}
+            >
+              <span className="hidden sm:inline">All Issues</span>
+              <span className="sm:hidden">Issues</span>
+              {allIssuesTotal > 0 && (
+                <Badge variant="secondary" className="ml-1 md:ml-2 text-xs">
+                  {allIssuesTotal}
                 </Badge>
               )}
             </TabsTrigger>
@@ -1512,6 +1854,290 @@ function AdminDashboardContent() {
             </Card>
           </TabsContent>
 
+          {/* All Issues Tab */}
+          <TabsContent value="issues" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <List className="h-5 w-5" />
+                        All Issues
+                      </CardTitle>
+                      <CardDescription>
+                        View and manage all issues across all municipalities ({allIssuesTotal} total)
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => fetchAllIssues(allIssuesPage)}
+                      disabled={allIssuesLoading}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${allIssuesLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                  </div>
+                  
+                  {/* Filters */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="text"
+                        placeholder="Search issues..."
+                        className="pl-10"
+                        value={issueSearchQuery}
+                        onChange={(e) => handleIssueSearch(e.target.value)}
+                      />
+                    </div>
+                    <Select
+                      value={issueStatusFilter}
+                      onValueChange={handleIssueStatusFilter}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="OPEN">Open</SelectItem>
+                        <SelectItem value="CLOSED">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={issueTypeFilter}
+                      onValueChange={handleIssueTypeFilter}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {issueTypes.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type.replace(/_/g, " ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={issueMunicipalityFilter}
+                      onValueChange={(value) => {
+                        handleIssueMunicipalityFilter(value);
+                        setMuniFilterSearch(""); // Reset search when selecting
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by municipality" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[300px] overflow-hidden">
+                        <div className="p-2 border-b bg-background">
+                          <Input
+                            placeholder="Search municipalities..."
+                            value={muniFilterSearch}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setMuniFilterSearch(e.target.value);
+                            }}
+                            className="h-8"
+                            onKeyDown={(e) => {
+                              e.stopPropagation();
+                              // Prevent select from capturing key events
+                              if (e.key !== 'Escape') {
+                                e.stopPropagation();
+                              }
+                            }}
+                            onFocus={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                        <div className="max-h-[220px] overflow-y-auto">
+                          <SelectItem value="all">All Municipalities</SelectItem>
+                          {filteredMunicipalitiesForDropdown.length === 0 ? (
+                            <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                              No municipalities found
+                            </div>
+                          ) : (
+                            filteredMunicipalitiesForDropdown.map((muni) => (
+                              <SelectItem key={muni.id} value={muni.id}>
+                                {muni.name}
+                              </SelectItem>
+                            ))
+                          )}
+                        </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {allIssuesLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-24 w-full" />
+                    ))}
+                  </div>
+                ) : allIssues.length > 0 ? (
+                  <div className="space-y-3">
+                    {/* Table Header */}
+                    <div className="hidden lg:grid lg:grid-cols-12 gap-4 px-4 py-2 bg-muted/50 rounded-lg text-sm font-medium text-muted-foreground">
+                      <div className="col-span-3">Type</div>
+                      <div className="col-span-3">Description</div>
+                      <div className="col-span-2">Status</div>
+                      <div className="col-span-2">Date</div>
+                      <div className="col-span-2 text-right">Actions</div>
+                    </div>
+
+                    {allIssues.map((issue) => (
+                      <div
+                        key={issue.id}
+                        className="grid grid-cols-1 lg:grid-cols-12 gap-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors items-center"
+                      >
+                        {/* Type */}
+                        <div className="lg:col-span-3">
+                          <Badge variant="outline" className="capitalize">
+                            {issue.type?.replace(/_/g, " ") || "Unknown"}
+                          </Badge>
+                        </div>
+
+                        {/* Description */}
+                        <div className="lg:col-span-3">
+                          <p className="text-sm line-clamp-2">{issue.description}</p>
+                          {issue.location?.address && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                              <MapPin className="h-3 w-3" />
+                              {issue.location.address}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Status */}
+                        <div className="lg:col-span-2">
+                          <Badge
+                            variant={
+                              issue.status === "OPEN"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {issue.status === "OPEN" ? (
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                            ) : (
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                            )}
+                            {issue.status}
+                          </Badge>
+                        </div>
+
+                        {/* Date */}
+                        <div className="lg:col-span-2 text-sm text-muted-foreground">
+                          <span className="lg:hidden font-medium">Reported: </span>
+                          {issue.createdAt
+                            ? new Date(issue.createdAt).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "Unknown"}
+                        </div>
+
+                        {/* Actions */}
+                        <div className="lg:col-span-2 flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setViewIssueDialog({ open: true, issue })}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditIssueDialog(issue)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteIssueDialog({ open: true, issue })}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="font-semibold mb-2">No Issues Found</h3>
+                    <p className="text-muted-foreground">
+                      {issueSearchQuery || issueStatusFilter !== "all" || issueTypeFilter !== "all" || issueMunicipalityFilter !== "all"
+                        ? "Try adjusting your search or filters"
+                        : "No issues have been reported yet"}
+                    </p>
+                  </div>
+                )}
+
+                {/* Pagination Controls */}
+                {allIssuesTotalPages > 1 && (
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {(allIssuesPage - 1) * ALL_ISSUES_PAGE_SIZE + 1} -{" "}
+                      {Math.min(allIssuesPage * ALL_ISSUES_PAGE_SIZE, allIssuesTotal)} of{" "}
+                      {allIssuesTotal} issues
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={allIssuesPage === 1}
+                        onClick={() => fetchAllIssues(allIssuesPage - 1)}
+                      >
+                        Previous
+                      </Button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: Math.min(5, allIssuesTotalPages) }, (_, i) => {
+                          let pageNum;
+                          if (allIssuesTotalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (allIssuesPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (allIssuesPage >= allIssuesTotalPages - 2) {
+                            pageNum = allIssuesTotalPages - 4 + i;
+                          } else {
+                            pageNum = allIssuesPage - 2 + i;
+                          }
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={allIssuesPage === pageNum ? "default" : "outline"}
+                              size="sm"
+                              className="w-8 h-8 p-0"
+                              onClick={() => fetchAllIssues(pageNum)}
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={allIssuesPage === allIssuesTotalPages}
+                        onClick={() => fetchAllIssues(allIssuesPage + 1)}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1875,6 +2501,318 @@ function AdminDashboardContent() {
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Municipality
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* View Issue Dialog */}
+        <Dialog 
+          open={viewIssueDialog.open} 
+          onOpenChange={(open) => setViewIssueDialog({ open, issue: viewIssueDialog.issue })}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Issue Details
+              </DialogTitle>
+            </DialogHeader>
+            {viewIssueDialog.issue && (
+              <div className="space-y-4">
+                {/* Issue Image */}
+                {viewIssueDialog.issue.imageUrls && viewIssueDialog.issue.imageUrls.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {viewIssueDialog.issue.imageUrls.map((url, i) => (
+                      <img 
+                        key={i}
+                        src={url} 
+                        alt={`Issue image ${i + 1}`} 
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Issue Info */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Type</Label>
+                    <p className="font-medium">{viewIssueDialog.issue.type?.replace(/_/g, " ")}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Status</Label>
+                    <Badge
+                      variant={
+                        viewIssueDialog.issue.status === "OPEN"
+                          ? "destructive"
+                          : "secondary"
+                      }
+                      className="mt-1"
+                    >
+                      {viewIssueDialog.issue.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Reported On</Label>
+                    <p className="font-medium">
+                      {viewIssueDialog.issue.createdAt
+                        ? new Date(viewIssueDialog.issue.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })
+                        : "Unknown"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Reported By</Label>
+                    <p className="font-medium">{viewIssueDialog.issue.reportedBy || "Anonymous"}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-muted-foreground">Description</Label>
+                  <p className="mt-1">{viewIssueDialog.issue.description}</p>
+                </div>
+
+                {viewIssueDialog.issue.location && (
+                  <div>
+                    <Label className="text-muted-foreground">Location</Label>
+                    <p className="flex items-center gap-1 mt-1">
+                      <MapPin className="h-4 w-4" />
+                      {viewIssueDialog.issue.location.address || 
+                        `${viewIssueDialog.issue.location.latitude}, ${viewIssueDialog.issue.location.longitude}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setViewIssueDialog({ open: false, issue: null })}
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  setViewIssueDialog({ open: false, issue: null });
+                  if (viewIssueDialog.issue) {
+                    openEditIssueDialog(viewIssueDialog.issue);
+                  }
+                }}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Issue
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Issue Dialog */}
+        <Dialog 
+          open={editIssueDialog.open} 
+          onOpenChange={(open) => setEditIssueDialog({ open, issue: editIssueDialog.issue })}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5" />
+                Edit Issue
+              </DialogTitle>
+              <DialogDescription>
+                Update issue details including status, type, description, location, and images
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {/* Status and Type Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select
+                    value={editIssueForm.status}
+                    onValueChange={(value) => setEditIssueForm(prev => ({ ...prev, status: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="OPEN">Open</SelectItem>
+                      <SelectItem value="CLOSED">Closed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={editIssueForm.type}
+                    onValueChange={(value) => setEditIssueForm(prev => ({ ...prev, type: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {issueTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={editIssueForm.description}
+                  onChange={(e) => setEditIssueForm(prev => ({ ...prev, description: e.target.value }))}
+                  rows={4}
+                />
+              </div>
+
+              {/* Location Section */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Location</Label>
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Address</Label>
+                  <Input
+                    value={editIssueForm.address}
+                    onChange={(e) => setEditIssueForm(prev => ({ ...prev, address: e.target.value }))}
+                    placeholder="Enter address"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Latitude</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      value={editIssueForm.latitude}
+                      onChange={(e) => setEditIssueForm(prev => ({ ...prev, latitude: e.target.value }))}
+                      placeholder="e.g., 28.6139"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Longitude</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      value={editIssueForm.longitude}
+                      onChange={(e) => setEditIssueForm(prev => ({ ...prev, longitude: e.target.value }))}
+                      placeholder="e.g., 77.2090"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Images Section */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Images</Label>
+                {editIssueForm.imageUrls.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {editIssueForm.imageUrls.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Issue image ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => {
+                            setEditIssueForm(prev => ({
+                              ...prev,
+                              imageUrls: prev.imageUrls.filter((_, i) => i !== index)
+                            }));
+                          }}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No images attached</p>
+                )}
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">Add Image URL</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="newImageUrl"
+                      placeholder="https://example.com/image.jpg"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const input = document.getElementById("newImageUrl") as HTMLInputElement;
+                        if (input?.value?.trim()) {
+                          setEditIssueForm(prev => ({
+                            ...prev,
+                            imageUrls: [...prev.imageUrls, input.value.trim()]
+                          }));
+                          input.value = "";
+                        }
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditIssueDialog({ open: false, issue: null })}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditIssue}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Issue Dialog */}
+        <Dialog 
+          open={deleteIssueDialog.open} 
+          onOpenChange={(open) => setDeleteIssueDialog({ open, issue: deleteIssueDialog.issue })}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                Delete Issue
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this issue? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            {deleteIssueDialog.issue && (
+              <div className="py-4">
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <p><strong>Type:</strong> {deleteIssueDialog.issue.type?.replace(/_/g, " ")}</p>
+                  <p><strong>Status:</strong> {deleteIssueDialog.issue.status}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-2">
+                    {deleteIssueDialog.issue.description}
+                  </p>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteIssueDialog({ open: false, issue: null })}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteIssueFromAll}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Issue
               </Button>
             </DialogFooter>
           </DialogContent>

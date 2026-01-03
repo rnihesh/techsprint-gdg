@@ -33,10 +33,41 @@
       ]
     },
     {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "issues",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "type", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "municipalities",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "score", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "municipalities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "name", "order": "ASCENDING" }
       ]
     }
   ],

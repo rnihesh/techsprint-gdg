@@ -1,5 +1,7 @@
 // Cloudinary configuration and upload utilities
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { config } from "./config";
+
+const API_BASE_URL = config.api.baseUrl;
 
 interface CloudinaryUploadResponse {
   secure_url: string;

@@ -276,44 +276,44 @@ function IssuesContent() {
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Header />
 
-      <main className="flex-1 container py-6 px-4">
+      <main className="flex-1 container py-4 md:py-6 px-4">
         <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4 mb-4 md:mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Issues</h1>
-              <p className="text-gray-600">
+              <h1 className="text-xl md:text-2xl font-bold text-gray-900">Issues Dashboard</h1>
+              <p className="text-sm md:text-base text-gray-600">
                 {userProfile?.displayName || "Your Municipality"}
               </p>
             </div>
-            <Button onClick={fetchIssues} variant="outline" size="sm">
+            <Button onClick={fetchIssues} variant="outline" size="sm" className="w-full sm:w-auto">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
           </div>
 
           {/* Stats Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-            <TabsList className="grid w-full grid-cols-3 h-auto p-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 md:mb-6">
+            <TabsList className="grid w-full grid-cols-2 h-auto p-1">
               <TabsTrigger
                 value="pending"
-                className="flex flex-col py-3 data-[state=active]:bg-yellow-100 data-[state=active]:text-yellow-800"
+                className="flex flex-col py-2 md:py-3 data-[state=active]:bg-yellow-100 data-[state=active]:text-yellow-800"
               >
-                <span className="text-2xl font-bold">{stats.pending}</span>
+                <span className="text-xl md:text-2xl font-bold">{stats.pending}</span>
                 <span className="text-xs">Pending</span>
               </TabsTrigger>
               <TabsTrigger
                 value="resolved"
-                className="flex flex-col py-3 data-[state=active]:bg-green-100 data-[state=active]:text-green-800"
+                className="flex flex-col py-2 md:py-3 data-[state=active]:bg-green-100 data-[state=active]:text-green-800"
               >
-                <span className="text-2xl font-bold">{stats.resolved}</span>
+                <span className="text-xl md:text-2xl font-bold">{stats.resolved}</span>
                 <span className="text-xs">Resolved</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row gap-2 md:gap-3 mb-4 md:mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -406,41 +406,43 @@ function IssuesContent() {
         open={!!selectedIssue}
         onOpenChange={(open) => !open && setSelectedIssue(null)}
       >
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto sm:max-w-[90vw] w-full mx-4">
           <DialogHeader>
-            <DialogTitle>Resolve Issue</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg md:text-xl">Resolve Issue</DialogTitle>
+            <DialogDescription className="text-sm">
               Upload a photo of the fixed issue and add a note
             </DialogDescription>
           </DialogHeader>
 
           {selectedIssue && (
-            <div className="space-y-6">
+            <div className="space-y-4 md:space-y-6">
               {/* Issue Preview */}
-              <div className="bg-gray-50 rounded-lg p-4">
+              <div className="bg-gray-50 rounded-lg p-3 md:p-4">
                 <div className="flex gap-3">
                   {selectedIssue.imageUrls?.[0] && (
                     <img
                       src={selectedIssue.imageUrls[0]}
                       alt="Issue"
-                      className="h-20 w-20 object-cover rounded-lg"
+                      className="h-16 w-16 md:h-20 md:w-20 object-cover rounded-lg flex-shrink-0"
                     />
                   )}
                   <div className="flex-1 min-w-0">
                     <Badge
                       className={`${
                         statusConfig[selectedIssue.status].bgColor
-                      } ${statusConfig[selectedIssue.status].color} border-0`}
+                      } ${statusConfig[selectedIssue.status].color} border-0 text-xs`}
                     >
                       {issueTypeLabels[selectedIssue.type] ||
                         selectedIssue.type}
                     </Badge>
-                    <p className="text-sm mt-1 line-clamp-2">
+                    <p className="text-xs md:text-sm mt-1 line-clamp-2">
                       {selectedIssue.description}
                     </p>
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                      <MapPin className="h-3 w-3" />
-                      {selectedIssue.location.address || "Location on map"}
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">
+                        {selectedIssue.location.address || "Location on map"}
+                      </span>
                     </p>
                   </div>
                 </div>
@@ -448,8 +450,8 @@ function IssuesContent() {
 
               {/* Resolution Image Upload */}
               <div className="space-y-2">
-                <Label>Resolution Photo</Label>
-                <p className="text-sm text-gray-500">
+                <Label className="text-sm md:text-base">Resolution Photo</Label>
+                <p className="text-xs md:text-sm text-gray-500">
                   Upload a photo showing the issue has been fixed (optional)
                 </p>
 
@@ -458,25 +460,25 @@ function IssuesContent() {
                     <img
                       src={resolutionImagePreview}
                       alt="Resolution preview"
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full h-40 md:h-48 object-cover rounded-lg"
                     />
                     <Button
                       size="icon"
                       variant="destructive"
-                      className="absolute top-2 right-2 h-8 w-8"
+                      className="absolute top-2 right-2 h-7 w-7 md:h-8 md:w-8"
                       onClick={() => {
                         setResolutionImage(null);
                         setResolutionImagePreview(null);
                       }}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:bg-gray-50 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Camera className="h-10 w-10 text-gray-400 mb-2" />
-                      <p className="text-sm text-gray-500">
+                  <label className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-primary hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center py-4 md:pt-5 md:pb-6">
+                      <Camera className="h-8 w-8 md:h-10 md:w-10 text-gray-400 mb-2" />
+                      <p className="text-xs md:text-sm text-gray-500 px-4 text-center">
                         <span className="font-medium text-primary">
                           Click to upload
                         </span>{" "}
@@ -498,25 +500,30 @@ function IssuesContent() {
 
               {/* Resolution Note */}
               <div className="space-y-2">
-                <Label>Resolution Note *</Label>
+                <Label className="text-sm md:text-base">Resolution Note *</Label>
                 <Textarea
                   placeholder="Describe what was done to fix this issue..."
                   value={resolutionNote}
                   onChange={(e) => setResolutionNote(e.target.value)}
                   rows={3}
+                  className="text-sm md:text-base"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setSelectedIssue(null)}>
+          <DialogFooter className="gap-2 flex-col sm:flex-row">
+            <Button 
+              variant="outline" 
+              onClick={() => setSelectedIssue(null)}
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
             <Button
               onClick={handleResolve}
               disabled={isSubmitting || !resolutionNote.trim()}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
             >
               {isSubmitting ? (
                 <>
