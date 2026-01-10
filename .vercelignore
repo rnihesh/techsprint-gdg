@@ -1,0 +1,33 @@
+# ML and training data (deploy separately)
+
+ml/
+_.keras
+_.h5
+_.pkl
+_.joblib
+
+# Development
+
+.env.local
+.env.development
+_.log
+.venv/
+venv/
+**pycache**/
+_.pyc
+
+# Scripts and tooling
+
+scripts/
+deploy/
+
+# Documentation (not needed for runtime)
+
+\*.md
+!README.md
+
+# Test files
+
+**/\*.test.ts
+**/_.test.tsx
+\*\*/_.spec.ts \*_/_.spec.tsx
