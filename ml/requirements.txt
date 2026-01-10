@@ -1,11 +1,9 @@
+fastapi
+uvicorn[standard]
 tensorflow
-numpy
 Pillow
-matplotlib
-scipy
-flask
-flask-cors
 requests
 google-generativeai
 python-dotenv
-gunicorn
+numpy
+python-multipart

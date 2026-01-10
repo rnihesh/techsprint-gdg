@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-.pnpm-store/
 
 # Build outputs
 dist/
@@ -25,7 +24,6 @@ out/
 
 # Debug
 npm-debug.log*
-pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
@@ -52,8 +50,15 @@ Thumbs.db
 serviceAccountKey.json
 *-firebase-adminsdk-*.json
 
-# Misc
-.turbo/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.env
+*.egg-info/
+.eggs/
 
-dataset/
-.venv
+# ML Models (optional - comment out if you want to track models)
+# server/ml/models/*.keras

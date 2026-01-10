@@ -1,19 +1,22 @@
 {
-  "name": "techsprint-gdg",
+  "name": "civiclemma",
   "version": "1.0.0",
   "description": "Civic Issue Reporting and Municipal Accountability Platform for India",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"pnpm run --parallel --filter './packages/*' dev\" \"pnpm run dev:web\" \"pnpm run dev:api\" \"pnpm run dev:ml\"",
-    "dev:web": "pnpm --filter @techsprint/web dev",
-    "dev:api": "pnpm --filter @techsprint/api dev",
-    "dev:ml": "source .venv/bin/activate && python3 ml/api_server.py",
-    "build": "pnpm run --parallel build",
-    "build:web": "pnpm --filter @techsprint/web build",
-    "build:api": "pnpm --filter @techsprint/api build",
-    "lint": "pnpm run --parallel lint",
-    "clean": "pnpm run --parallel clean",
-    "typecheck": "pnpm run --parallel typecheck"
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"npm run dev:ml\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev:ml": "cd ml && .venv/bin/python -m uvicorn main:app --reload --port 8000",
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "cd server && npm run build",
+    "build:client": "cd client && npm run build",
+    "start:server": "cd server && npm start",
+    "start:client": "cd client && npm start",
+    "start:ml": "cd ml && .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "install:ml": "cd ml && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt",
+    "clean": "rm -rf node_modules && cd server && rm -rf node_modules dist && cd ../client && rm -rf node_modules .next"
   },
   "keywords": [
     "civic",
@@ -24,10 +27,8 @@
   ],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a",
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=18.0.0"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
