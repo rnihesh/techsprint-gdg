@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response as ExpressResponse } from "express";
 import type { Router as IRouter } from "express";
 import {
   ML_CLASS_TO_ISSUE_TYPE,
@@ -50,7 +50,7 @@ router.post(
   "/",
   async (
     req: Request<object, ClassifyResponse, ClassifyRequest>,
-    res: Response<ClassifyResponse>
+    res: ExpressResponse<ClassifyResponse>
   ) => {
     try {
       const { imageUrl } = req.body;
@@ -95,7 +95,7 @@ router.post(
  * GET /api/classify/issue-types
  * Get list of all valid issue types that can be classified
  */
-router.get("/issue-types", (_req: Request, res: Response) => {
+router.get("/issue-types", (_req: Request, res: ExpressResponse) => {
   const issueTypes = ML_CLASS_NAMES.map((className) => ({
     className,
     issueType: ML_CLASS_TO_ISSUE_TYPE[className],
