@@ -9,7 +9,7 @@ export default defineConfig({
   clean: true,
   bundle: true,
   minify: true,
-  external: ["firebase-admin", "firebase"],
+  external: [],
   noExternal: [
     "@techsprint/firebase",
     "@techsprint/types",
