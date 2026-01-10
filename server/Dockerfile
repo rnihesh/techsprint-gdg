@@ -1,15 +1,23 @@
-FROM node:18-alpine
-
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copy package files
+# Install full dependencies for build
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
+# Copy source and build
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+# Install only production deps
+COPY package*.json ./
 RUN npm ci --only=production
 
-# Copy built files
-COPY dist ./dist
+# Copy built files and service account
+COPY --from=builder /app/dist ./dist
 COPY serviceAccountKey.json* ./
 
 # Expose port
