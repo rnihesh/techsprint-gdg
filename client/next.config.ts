@@ -1,9 +1,29 @@
 import type { NextConfig } from "next";
-import path from "path";
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: path.resolve('.'),
+  // Enable React strict mode for better development experience
+  reactStrictMode: true,
+  
+  // Image optimization - add domains for external images if needed
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+    ],
+  },
+  
+  // Production optimizations
+  poweredByHeader: false,
+  
+  // Environment variables validation
+  env: {
+    NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'CivicLemma',
   },
 };
 

@@ -49,6 +49,7 @@ Thumbs.db
 # Firebase Service Account Keys (NEVER commit these!)
 serviceAccountKey.json
 *-firebase-adminsdk-*.json
+server/serviceAccountKey.json
 
 # Python
 __pycache__/
@@ -60,5 +61,5 @@ venv/
 *.egg-info/
 .eggs/
 
-# ML Models (optional - comment out if you want to track models)
-# server/ml/models/*.keras
+# ML Models are tracked (needed for deployment)
+# Do NOT ignore ml/models/
