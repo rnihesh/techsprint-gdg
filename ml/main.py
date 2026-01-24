@@ -5,8 +5,8 @@ Runs the trained MobileNetV2 model for inference
 
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 import numpy as np
@@ -19,6 +19,11 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 import uvicorn
+
+# Import ML services
+from services.clustering import get_clustering_service
+from services.severity import get_severity_service
+from services.risk import get_risk_service
 
 # Load environment variables from .env file in same directory
 load_dotenv(dotenv_path=Path(__file__).parent / ".env")
@@ -123,6 +128,110 @@ class DescriptionResponse(BaseModel):
     success: bool
     description: Optional[str] = None
     error: Optional[str] = None
+
+
+# ============================================
+# CLUSTERING MODELS
+# ============================================
+
+class IssueLocation(BaseModel):
+    latitude: Optional[float] = Field(None, alias="latitude")
+    longitude: Optional[float] = Field(None, alias="longitude")
+    lat: Optional[float] = None
+    lng: Optional[float] = None
+
+
+class ClusterIssue(BaseModel):
+    id: str
+    location: IssueLocation
+    type: Optional[str] = None
+    severity: Optional[float] = None
+
+
+class ClusterRequest(BaseModel):
+    issues: List[ClusterIssue]
+    eps_meters: float = 50
+    min_samples: int = 2
+
+
+class ClusterInfo(BaseModel):
+    id: str
+    centroid: Dict[str, float]
+    issueCount: int
+    aggregateSeverity: float
+    severityLevel: str
+    dominantType: Optional[str]
+    typeCounts: Dict[str, int]
+    radiusMeters: float
+    issueIds: List[str]
+
+
+class ClusterResponse(BaseModel):
+    success: bool
+    clusters: List[ClusterInfo]
+    unclustered: List[Dict[str, Any]]
+    statistics: Dict[str, Any]
+
+
+# ============================================
+# SEVERITY MODELS
+# ============================================
+
+class SeverityRequest(BaseModel):
+    imageUrl: Optional[str] = None
+    issueType: Optional[str] = None
+
+
+class SeverityResponse(BaseModel):
+    success: bool
+    score: float
+    level: str
+    confidence: float
+    factors: List[str]
+    mlScore: Optional[float] = None
+    ruleScore: Optional[float] = None
+
+
+# ============================================
+# RISK MODELS
+# ============================================
+
+class RiskRequest(BaseModel):
+    latitude: float
+    longitude: float
+    rainfall_mm: float = 0
+    temperature_c: float = 30
+    humidity_pct: float = 60
+    road_type: str = "urban"
+    traffic_density: float = 0.5
+    issue_count_30d: int = 5
+    is_hotspot: bool = False
+    resolution_rate: float = 0.7
+    days_since_last_issue: int = 30
+    population_density: float = 0.5
+
+
+class RiskResponse(BaseModel):
+    success: bool
+    riskScore: float
+    riskLevel: str
+    confidence: float
+    factors: List[str]
+    location: Dict[str, float]
+    weather: Dict[str, Any]
+
+
+class RiskGridRequest(BaseModel):
+    bounds: Dict[str, float]  # north, south, east, west
+    grid_size: int = 10
+    weather: Optional[Dict[str, float]] = None
+
+
+class RiskGridResponse(BaseModel):
+    success: bool
+    predictions: List[Dict[str, Any]]
+    bounds: Dict[str, float]
+    gridSize: int
 
 
 def load_classifier():
@@ -287,6 +396,77 @@ async def health():
         status="healthy",
         model_loaded=model is not None,
     )
+
+
+@app.get("/models")
+async def get_models_info():
+    """Get information about loaded ML models and their metrics"""
+    global model, class_mapping
+
+    # Check which models are available
+    severity_model_path = Path(__file__).parent / "models" / "severity_model.keras"
+    risk_model_path = Path(__file__).parent / "models" / "risk_model.joblib"
+    eval_report_path = Path(__file__).parent / "models" / "evaluation_report.json"
+    severity_metrics_path = Path(__file__).parent / "models" / "severity_metrics.json"
+
+    models_info = {
+        "classifier": {
+            "name": "MobileNetV2 Issue Classifier",
+            "status": "loaded" if model is not None else "not_loaded",
+            "classes": list(ML_CLASS_TO_ISSUE_TYPE.keys()) if class_mapping else [],
+            "num_classes": len(ML_CLASS_TO_ISSUE_TYPE),
+        },
+        "severity": {
+            "name": "EfficientNet-B0 Severity Scorer",
+            "status": "available" if severity_model_path.exists() else "not_trained",
+            "metrics": None,
+        },
+        "risk": {
+            "name": "XGBoost Risk Predictor",
+            "status": "available" if risk_model_path.exists() else "not_trained",
+        },
+        "clustering": {
+            "name": "DBSCAN Geographic Clustering",
+            "status": "ready",
+            "algorithm": "DBSCAN with Haversine Distance",
+            "default_params": {"eps_meters": 50, "min_samples": 2},
+        },
+    }
+
+    # Load severity metrics if available
+    if severity_metrics_path.exists():
+        try:
+            with open(severity_metrics_path, "r") as f:
+                severity_metrics = json.load(f)
+                models_info["severity"]["metrics"] = {
+                    "mae": round(severity_metrics.get("val_mae_scaled", 0), 2),
+                    "mse": round(severity_metrics.get("val_loss", 0), 4),
+                    "training_samples": severity_metrics.get("training_samples", 0),
+                    "validation_samples": severity_metrics.get("validation_samples", 0),
+                }
+        except Exception:
+            pass
+
+    # Load evaluation report if available
+    evaluation = None
+    if eval_report_path.exists():
+        try:
+            with open(eval_report_path, "r") as f:
+                evaluation = json.load(f)
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "models": models_info,
+        "evaluation": evaluation,
+        "capabilities": [
+            "Image classification (9 issue types)",
+            "Severity scoring (1-10 scale)",
+            "Geographic clustering (DBSCAN)",
+            "Risk prediction (weather + location)",
+        ],
+    }
 
 
 @app.post("/classify", response_model=ClassifyResponse)
@@ -543,7 +723,7 @@ async def generate_description(request: GenerateDescriptionRequest):
             "DAMAGED_ELECTRICAL": "damaged electrical pole or wire",
         }.get(request.issueType, "municipal issue")
 
-        prompt = f"""You are helping citizens report municipal issues. 
+        prompt = f"""You are helping citizens report municipal issues.
 Analyze this image showing a {issue_type_name} and write a brief, clear description (2-3 sentences) that would help municipal workers understand and locate the issue.
 
 Include:
@@ -576,6 +756,166 @@ Just provide the description text, no quotes or prefixes."""
         )
 
 
+# ============================================
+# CLUSTERING ENDPOINTS
+# ============================================
+
+@app.post("/cluster", response_model=ClusterResponse)
+async def cluster_issues(request: ClusterRequest):
+    """
+    Cluster nearby issues using DBSCAN algorithm.
+
+    Groups issues within specified distance (default 50m) into clusters.
+    Returns clusters with centroid, aggregate severity, and dominant issue type.
+    """
+    try:
+        # Convert request issues to dict format
+        issues_data = []
+        for issue in request.issues:
+            loc = issue.location
+            lat = loc.latitude or loc.lat
+            lng = loc.longitude or loc.lng
+
+            if lat is None or lng is None:
+                continue
+
+            issues_data.append({
+                "id": issue.id,
+                "location": {
+                    "latitude": lat,
+                    "longitude": lng,
+                },
+                "type": issue.type,
+                "severity": issue.severity,
+            })
+
+        # Get clustering service with requested parameters
+        clustering_service = get_clustering_service(
+            eps_meters=request.eps_meters,
+            min_samples=request.min_samples
+        )
+
+        # Perform clustering
+        result = clustering_service.cluster_issues(issues_data)
+
+        return ClusterResponse(
+            success=True,
+            clusters=result["clusters"],
+            unclustered=result["unclustered"],
+            statistics=result["statistics"],
+        )
+
+    except Exception as e:
+        print(f"Clustering error: {e}")
+        raise HTTPException(status_code=500, detail=f"Clustering failed: {str(e)}")
+
+
+# ============================================
+# SEVERITY ENDPOINTS
+# ============================================
+
+@app.post("/predict-severity", response_model=SeverityResponse)
+async def predict_severity(request: SeverityRequest):
+    """
+    Predict severity score (1-10) for an issue.
+
+    Uses EfficientNet-B0 model if available, falls back to rule-based scoring.
+    """
+    try:
+        severity_service = get_severity_service()
+
+        result = severity_service.predict_from_image(
+            image_url=request.imageUrl,
+            issue_type=request.issueType,
+        )
+
+        return SeverityResponse(
+            success=True,
+            score=result["score"],
+            level=result["level"],
+            confidence=result["confidence"],
+            factors=result["factors"],
+            mlScore=result.get("mlScore"),
+            ruleScore=result.get("ruleScore"),
+        )
+
+    except Exception as e:
+        print(f"Severity prediction error: {e}")
+        raise HTTPException(status_code=500, detail=f"Severity prediction failed: {str(e)}")
+
+
+# ============================================
+# RISK ENDPOINTS
+# ============================================
+
+@app.post("/predict-risk", response_model=RiskResponse)
+async def predict_risk(request: RiskRequest):
+    """
+    Predict infrastructure risk score for a location.
+
+    Uses XGBoost model based on weather, location, and historical factors.
+    """
+    try:
+        risk_service = get_risk_service()
+
+        result = risk_service.predict(
+            latitude=request.latitude,
+            longitude=request.longitude,
+            rainfall_mm=request.rainfall_mm,
+            temperature_c=request.temperature_c,
+            humidity_pct=request.humidity_pct,
+            road_type=request.road_type,
+            traffic_density=request.traffic_density,
+            issue_count_30d=request.issue_count_30d,
+            is_hotspot=request.is_hotspot,
+            resolution_rate=request.resolution_rate,
+            days_since_last_issue=request.days_since_last_issue,
+            population_density=request.population_density,
+        )
+
+        return RiskResponse(
+            success=True,
+            riskScore=result["riskScore"],
+            riskLevel=result["riskLevel"],
+            confidence=result["confidence"],
+            factors=result["factors"],
+            location=result["location"],
+            weather=result["weather"],
+        )
+
+    except Exception as e:
+        print(f"Risk prediction error: {e}")
+        raise HTTPException(status_code=500, detail=f"Risk prediction failed: {str(e)}")
+
+
+@app.post("/predict-risk-grid", response_model=RiskGridResponse)
+async def predict_risk_grid(request: RiskGridRequest):
+    """
+    Predict risk scores for a grid of points within bounds.
+
+    Useful for generating heatmap visualizations.
+    """
+    try:
+        risk_service = get_risk_service()
+
+        predictions = risk_service.predict_grid(
+            bounds=request.bounds,
+            grid_size=request.grid_size,
+            weather=request.weather,
+        )
+
+        return RiskGridResponse(
+            success=True,
+            predictions=predictions,
+            bounds=request.bounds,
+            gridSize=request.grid_size,
+        )
+
+    except Exception as e:
+        print(f"Risk grid prediction error: {e}")
+        raise HTTPException(status_code=500, detail=f"Risk grid prediction failed: {str(e)}")
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("ML_API_PORT", 3002))
     print(f"\nStarting server on http://localhost:{port}")
@@ -583,6 +923,10 @@ if __name__ == "__main__":
     print(f"  POST /classify - Classify an image via URL")
     print(f"  POST /classify-file - Classify an uploaded image file")
     print(f"  POST /generate-description - Generate issue description with Gemini AI")
+    print(f"  POST /cluster - Cluster nearby issues (DBSCAN)")
+    print(f"  POST /predict-severity - Predict issue severity (1-10)")
+    print(f"  POST /predict-risk - Predict infrastructure risk")
+    print(f"  POST /predict-risk-grid - Predict risk for grid (heatmap)")
     print(f"  GET  /issue-types - List valid issue types")
     print(f"  GET  /health - Health check")
     print(f"  GET  /docs - API documentation (Swagger UI)")

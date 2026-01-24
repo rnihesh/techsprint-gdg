@@ -8,6 +8,7 @@ export const config = {
   api: {
     baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api",
     mlUrl: process.env.NEXT_PUBLIC_ML_API_URL || "http://localhost:8000",
+    agentUrl: process.env.NEXT_PUBLIC_AGENT_API_URL || "http://localhost:8001",
   },
 
   // Map Configuration

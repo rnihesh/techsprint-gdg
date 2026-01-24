@@ -11,9 +11,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Clock, CheckCircle, AlertTriangle, MapPin } from "lucide-react";
 import { config } from "@/lib/config";
+import { ClusterMarker } from "./ClusterMarker";
+import { RiskHeatmap } from "./RiskHeatmap";
 
 // Libraries to load - must be consistent across all map components
 const libraries: ("places" | "geometry")[] = ["places"];
+
+interface IssuePriority {
+  score: number;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  reasoning?: string;
+}
 
 interface Issue {
   id: string;
@@ -28,6 +36,7 @@ interface Issue {
   createdAt: string;
   municipalityId: string;
   imageUrls?: string[];
+  priority?: IssuePriority;
 }
 
 interface MunicipalityBounds {
@@ -41,9 +50,34 @@ interface MunicipalityBounds {
   };
 }
 
+interface ClusterData {
+  id: string;
+  centroid: { latitude: number; longitude: number };
+  issueCount: number;
+  aggregateSeverity: number;
+  severityLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  dominantType: string | null;
+  typeCounts: Record<string, number>;
+  radiusMeters: number;
+  issueIds: string[];
+}
+
+interface RiskGridPoint {
+  latitude: number;
+  longitude: number;
+  riskScore: number;
+  riskLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+}
+
 interface GoogleMapComponentProps {
   issues: Issue[];
   municipalities?: MunicipalityBounds[];
+  clusters?: ClusterData[];
+  riskData?: {
+    predictions: RiskGridPoint[];
+    bounds: { north: number; south: number; east: number; west: number };
+    gridSize: number;
+  };
   center?: { lat: number; lng: number };
   zoom?: number;
   onBoundsChange?: (bounds: {
@@ -53,6 +87,8 @@ interface GoogleMapComponentProps {
     west: number;
   }) => void;
   showMunicipalityBorders?: boolean;
+  showClusters?: boolean;
+  showRiskHeatmap?: boolean;
 }
 
 const containerStyle = {
@@ -77,15 +113,71 @@ const mapOptions: google.maps.MapOptions = {
   ],
 };
 
-const getMarkerColor = (status: string): string => {
-  switch (status) {
-    case "OPEN":
-      return "#EF4444"; // red
-    case "CLOSED":
-      return "#22C55E"; // green
-    default:
-      return "#6B7280"; // gray
+const getMarkerColor = (status: string, priority?: IssuePriority): string => {
+  // Closed issues are always green
+  if (status === "CLOSED") {
+    return "#22C55E"; // green
   }
+
+  // If no priority, use status-based color
+  if (!priority) {
+    switch (status) {
+      case "OPEN":
+        return "#EF4444"; // red
+      default:
+        return "#6B7280"; // gray
+    }
+  }
+
+  // Use priority-based coloring for open issues
+  switch (priority.severity) {
+    case "CRITICAL":
+      return "#DC2626"; // red-600
+    case "HIGH":
+      return "#EA580C"; // orange-600
+    case "MEDIUM":
+      return "#CA8A04"; // yellow-600
+    case "LOW":
+      return "#16A34A"; // green-600
+    default:
+      return "#EF4444"; // red
+  }
+};
+
+const getMarkerScale = (priority?: IssuePriority): number => {
+  if (!priority) return 10;
+
+  switch (priority.severity) {
+    case "CRITICAL":
+      return 14;
+    case "HIGH":
+      return 12;
+    case "MEDIUM":
+      return 10;
+    case "LOW":
+      return 8;
+    default:
+      return 10;
+  }
+};
+
+const getPriorityBadgeHtml = (priority: IssuePriority): string => {
+  const colors: Record<string, { bg: string; text: string; dot: string }> = {
+    CRITICAL: { bg: "#FEE2E2", text: "#B91C1C", dot: "#EF4444" },
+    HIGH: { bg: "#FFEDD5", text: "#C2410C", dot: "#F97316" },
+    MEDIUM: { bg: "#FEF9C3", text: "#A16207", dot: "#EAB308" },
+    LOW: { bg: "#DCFCE7", text: "#15803D", dot: "#22C55E" },
+  };
+
+  const config = colors[priority.severity] || colors.MEDIUM;
+  const label = priority.severity.charAt(0) + priority.severity.slice(1).toLowerCase();
+
+  return `
+    <span style="display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; background: ${config.bg}; color: ${config.text}; font-size: 11px; font-weight: 500;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: ${config.dot};"></span>
+      ${label} (${priority.score}/10)
+    </span>
+  `;
 };
 
 const getStatusIcon = (status: string) => {
@@ -142,10 +234,14 @@ const getTypeBadge = (type: string) => {
 export function GoogleMapComponent({
   issues,
   municipalities = [],
+  clusters = [],
+  riskData,
   center,
   zoom = 12,
   onBoundsChange,
   showMunicipalityBorders = true,
+  showClusters = false,
+  showRiskHeatmap = false,
 }: GoogleMapComponentProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
@@ -298,7 +394,26 @@ export function GoogleMapComponent({
           </InfoWindow>
         )}
 
-      {issues.map((issue) => (
+      {/* Risk Heatmap Layer */}
+      {showRiskHeatmap && riskData && (
+        <RiskHeatmap
+          predictions={riskData.predictions}
+          bounds={riskData.bounds}
+          gridSize={riskData.gridSize}
+          opacity={0.5}
+        />
+      )}
+
+      {/* Cluster Markers (when clustering is enabled) */}
+      {showClusters && clusters.map((cluster) => (
+        <ClusterMarker
+          key={cluster.id}
+          cluster={cluster}
+        />
+      ))}
+
+      {/* Individual Issue Markers (when clustering is disabled) */}
+      {!showClusters && issues.map((issue) => (
         <Marker
           key={issue.id}
           position={{
@@ -308,12 +423,13 @@ export function GoogleMapComponent({
           onClick={() => setSelectedIssue(issue)}
           icon={{
             path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: getMarkerColor(issue.status),
+            scale: getMarkerScale(issue.priority),
+            fillColor: getMarkerColor(issue.status, issue.priority),
             fillOpacity: 1,
             strokeColor: "#ffffff",
             strokeWeight: 2,
           }}
+          zIndex={issue.priority ? issue.priority.score * 10 : 1}
         />
       ))}
 
@@ -336,15 +452,31 @@ export function GoogleMapComponent({
                 />
               </div>
             )}
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               {getStatusIcon(selectedIssue.status)}
               {getStatusBadge(selectedIssue.status)}
               {getTypeBadge(selectedIssue.type)}
             </div>
+            {/* Priority Badge */}
+            {selectedIssue.priority && (
+              <div
+                className="mb-2"
+                dangerouslySetInnerHTML={{
+                  __html: getPriorityBadgeHtml(selectedIssue.priority),
+                }}
+              />
+            )}
             <p className="text-sm font-medium mb-1">
               {selectedIssue.description.slice(0, 100)}
               {selectedIssue.description.length > 100 ? "..." : ""}
             </p>
+            {/* Priority reasoning */}
+            {selectedIssue.priority?.reasoning && (
+              <p className="text-xs text-gray-600 mb-1 italic">
+                {selectedIssue.priority.reasoning.slice(0, 100)}
+                {selectedIssue.priority.reasoning.length > 100 ? "..." : ""}
+              </p>
+            )}
             <div className="flex items-center gap-1 text-xs text-gray-500">
               <MapPin className="h-3 w-3" />
               <span>

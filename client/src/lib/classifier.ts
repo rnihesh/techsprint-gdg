@@ -29,10 +29,11 @@ export const ML_CLASS_TO_ISSUE_TYPE: Record<string, string> = {
   "Damaged Electric wires and poles": "DAMAGED_ELECTRICAL",
 };
 
-// ML API URL (Python Flask server running the TensorFlow model)
+// API URLs
 import { config } from "./config";
 
 const ML_API_URL = config.api.mlUrl;
+const AGENT_API_URL = config.api.agentUrl || "http://localhost:8001";
 
 // Confidence thresholds
 const CONFIDENCE_THRESHOLD = 0.70;
@@ -49,7 +50,40 @@ export interface ClassificationResult {
 }
 
 /**
+ * Classify an image using GPT-4o vision (Agent Service)
+ */
+async function classifyWithAgent(imageUrl: string): Promise<ClassificationResult | null> {
+  try {
+    const response = await fetch(`${AGENT_API_URL}/agent/classify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_url: imageUrl }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        return {
+          isValid: data.isValid,
+          isUnrelated: data.isUnrelated || false,
+          issueType: data.issueType,
+          className: data.className,
+          confidence: data.confidence,
+          message: data.message,
+          allPredictions: data.allPredictions || [],
+        };
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error("Agent classification error:", error);
+    return null;
+  }
+}
+
+/**
  * Classify an image using the ML API server (runs real TensorFlow model)
+ * Falls back to Agent Service (GPT-4o vision) if ML service is unavailable
  */
 export async function classifyImage(imageUrl: string): Promise<ClassificationResult> {
   try {
@@ -86,7 +120,7 @@ export async function classifyImage(imageUrl: string): Promise<ClassificationRes
         body: JSON.stringify({ imageUrl }),
       }
     );
-    
+
     if (fallbackResponse.ok) {
       const data = await fallbackResponse.json();
       if (data.success) {
@@ -102,9 +136,17 @@ export async function classifyImage(imageUrl: string): Promise<ClassificationRes
       }
     }
 
-    throw new Error("Classification API unavailable");
+    throw new Error("ML/Express API unavailable");
   } catch (error) {
-    console.error("ML API error:", error);
+    console.error("ML API error, trying Agent Service:", error);
+
+    // Try Agent Service (GPT-4o vision) as fallback
+    const agentResult = await classifyWithAgent(imageUrl);
+    if (agentResult) {
+      return agentResult;
+    }
+
+    // Final fallback: client-side heuristics
     return await classifyImageClientSide(imageUrl);
   }
 }
@@ -270,7 +312,36 @@ export function validateIssueType(
 }
 
 /**
+ * Generate a description using Agent Service (GPT-4o vision)
+ */
+async function generateDescriptionWithAgent(
+  imageUrl: string,
+  issueType: string
+): Promise<{ success: boolean; description?: string; error?: string }> {
+  try {
+    const response = await fetch(`${AGENT_API_URL}/agent/generate-description`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_url: imageUrl, issue_type: issueType }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success) {
+        return { success: true, description: data.description };
+      }
+      return { success: false, error: data.error || "Failed to generate description" };
+    }
+    return { success: false, error: "Agent description service unavailable" };
+  } catch (error) {
+    console.error("Agent description error:", error);
+    return { success: false, error: "Failed to connect to agent service" };
+  }
+}
+
+/**
  * Generate a description for the issue using Gemini AI
+ * Falls back to Agent Service (GPT-4o vision) if ML service is unavailable
  */
 export async function generateDescription(
   imageUrl: string,
@@ -293,9 +364,12 @@ export async function generateDescription(
       return { success: false, error: data.error || "Failed to generate description" };
     }
 
-    return { success: false, error: "Description service unavailable" };
+    // ML service unavailable, try Agent Service
+    throw new Error("ML description service unavailable");
   } catch (error) {
-    console.error("Description generation error:", error);
-    return { success: false, error: "Failed to connect to description service" };
+    console.error("ML description error, trying Agent Service:", error);
+
+    // Try Agent Service (GPT-4o vision) as fallback
+    return await generateDescriptionWithAgent(imageUrl, issueType);
   }
 }

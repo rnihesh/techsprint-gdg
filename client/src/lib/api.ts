@@ -232,3 +232,162 @@ export const authApi = {
 export const healthApi = {
   check: () => api<{ status: string; timestamp: string }>("/health"),
 };
+
+// ML APIs
+interface ClusterIssue {
+  id: string;
+  centroid: { latitude: number; longitude: number };
+  issueCount: number;
+  aggregateSeverity: number;
+  severityLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  dominantType: string | null;
+  typeCounts: Record<string, number>;
+  radiusMeters: number;
+  issueIds: string[];
+}
+
+interface ClusterResult {
+  clusters: ClusterIssue[];
+  unclustered: unknown[];
+  statistics: {
+    totalIssues: number;
+    clusteredCount: number;
+    unclusteredCount: number;
+    clusterCount: number;
+    avgClusterSize: number;
+  };
+}
+
+interface SeverityResult {
+  score: number;
+  level: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  confidence: number;
+  factors: string[];
+}
+
+interface RiskResult {
+  riskScore: number;
+  riskLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  confidence: number;
+  factors: string[];
+  location: { latitude: number; longitude: number };
+  weather: {
+    rainfall_mm: number;
+    temperature_c: number;
+    humidity_pct: number;
+    is_monsoon: boolean;
+  };
+}
+
+interface RiskGridResult {
+  predictions: Array<{
+    latitude: number;
+    longitude: number;
+    riskScore: number;
+    riskLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  }>;
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  gridSize: number;
+}
+
+export const mlApi = {
+  cluster: (params?: {
+    eps_meters?: number;
+    min_samples?: number;
+    bounds?: {
+      north: number;
+      south: number;
+      east: number;
+      west: number;
+    };
+    municipalityId?: string;
+    status?: string;
+  }) =>
+    api<ClusterResult>("/ml/cluster", {
+      method: "POST",
+      body: params || {},
+    }),
+
+  predictSeverity: (params: { imageUrl?: string; issueType?: string }) =>
+    api<SeverityResult>("/ml/predict-severity", {
+      method: "POST",
+      body: params,
+    }),
+
+  predictRisk: (params: {
+    latitude: number;
+    longitude: number;
+    rainfall_mm?: number;
+    temperature_c?: number;
+    humidity_pct?: number;
+    road_type?: "highway" | "urban" | "rural";
+    traffic_density?: number;
+  }) =>
+    api<RiskResult>("/ml/predict-risk", {
+      method: "POST",
+      body: params,
+    }),
+
+  predictRiskGrid: (params: {
+    bounds: {
+      north: number;
+      south: number;
+      east: number;
+      west: number;
+    };
+    grid_size?: number;
+    weather?: {
+      rainfall_mm?: number;
+      temperature_c?: number;
+      humidity_pct?: number;
+    };
+  }) =>
+    api<RiskGridResult>("/ml/predict-risk-grid", {
+      method: "POST",
+      body: params,
+    }),
+
+  health: () =>
+    api<{ mlService: "healthy" | "unavailable" }>("/ml/health"),
+
+  models: () =>
+    api<{
+      models: {
+        classifier: {
+          name: string;
+          status: string;
+          classes: string[];
+          num_classes: number;
+        };
+        severity: {
+          name: string;
+          status: string;
+          metrics: {
+            mae: number;
+            mse: number;
+            training_samples: number;
+            validation_samples: number;
+          } | null;
+        };
+        risk: {
+          name: string;
+          status: string;
+        };
+        clustering: {
+          name: string;
+          status: string;
+          algorithm: string;
+          default_params: {
+            eps_meters: number;
+            min_samples: number;
+          };
+        };
+      };
+      capabilities: string[];
+    }>("/ml/models"),
+};

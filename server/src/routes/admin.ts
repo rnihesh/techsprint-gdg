@@ -946,7 +946,7 @@ router.delete(
 // DASHBOARD STATS
 // ============================================
 
-// Get admin dashboard stats
+// Get admin dashboard stats (enhanced with analytics)
 router.get("/stats", async (req: AuthenticatedRequest, res: Response) => {
   try {
     const db = getAdminDb();
@@ -963,29 +963,183 @@ router.get("/stats", async (req: AuthenticatedRequest, res: Response) => {
           .get(),
       ]);
 
+    // Get all issues for detailed analytics
     const issuesSnapshot = await db.collection(COLLECTIONS.ISSUES).get();
-    const statusBreakdown = {
+
+    const statusBreakdown: Record<string, number> = {
       OPEN: 0,
       CLOSED: 0,
     };
 
+    const issuesByType: Record<string, number> = {};
+    const issuesByMunicipality: Record<string, { count: number; name?: string }> = {};
+    const issuesLast7Days: Record<string, number> = {};
+    const issuesLast30Days: Record<string, number> = {};
+
+    // Initialize last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      issuesLast7Days[dateStr] = 0;
+    }
+
+    // Initialize last 30 days
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      issuesLast30Days[dateStr] = 0;
+    }
+
+    let totalResolutionTime = 0;
+    let resolvedCount = 0;
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
     issuesSnapshot.docs.forEach((doc) => {
-      const status = doc.data().status;
+      const data = doc.data();
+      const status = data.status;
+      const type = data.type;
+      const municipalityId = data.municipalityId;
+      const createdAt = data.createdAt?.toDate?.() || new Date(data.createdAt);
+      const closedAt = data.closedAt?.toDate?.() || (data.closedAt ? new Date(data.closedAt) : null);
+
+      // Status breakdown
       if (status === "OPEN") {
         statusBreakdown.OPEN++;
       } else if (status === "CLOSED") {
         statusBreakdown.CLOSED++;
       }
+
+      // Type breakdown
+      if (type) {
+        issuesByType[type] = (issuesByType[type] || 0) + 1;
+      }
+
+      // Municipality breakdown
+      if (municipalityId) {
+        if (!issuesByMunicipality[municipalityId]) {
+          issuesByMunicipality[municipalityId] = { count: 0 };
+        }
+        issuesByMunicipality[municipalityId].count++;
+      }
+
+      // Issues trend (last 7 days)
+      if (createdAt >= sevenDaysAgo) {
+        const dateStr = createdAt.toISOString().split('T')[0];
+        if (issuesLast7Days[dateStr] !== undefined) {
+          issuesLast7Days[dateStr]++;
+        }
+      }
+
+      // Issues trend (last 30 days)
+      if (createdAt >= thirtyDaysAgo) {
+        const dateStr = createdAt.toISOString().split('T')[0];
+        if (issuesLast30Days[dateStr] !== undefined) {
+          issuesLast30Days[dateStr]++;
+        }
+      }
+
+      // Resolution time calculation
+      if (status === "CLOSED" && closedAt && createdAt) {
+        const resolutionTime = closedAt.getTime() - createdAt.getTime();
+        if (resolutionTime > 0) {
+          totalResolutionTime += resolutionTime;
+          resolvedCount++;
+        }
+      }
     });
+
+    // Get municipality names for top municipalities
+    const topMunicipalityIds = Object.entries(issuesByMunicipality)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5)
+      .map(([id]) => id);
+
+    if (topMunicipalityIds.length > 0) {
+      const muniPromises = topMunicipalityIds.map(id =>
+        db.collection(COLLECTIONS.MUNICIPALITIES).doc(id).get()
+      );
+      const muniDocs = await Promise.all(muniPromises);
+      muniDocs.forEach((doc) => {
+        if (doc.exists && issuesByMunicipality[doc.id]) {
+          issuesByMunicipality[doc.id].name = doc.data()?.name || "Unknown";
+        }
+      });
+    }
+
+    // Calculate average resolution time (in hours)
+    const avgResolutionTimeHours = resolvedCount > 0
+      ? Math.round(totalResolutionTime / resolvedCount / (1000 * 60 * 60))
+      : 0;
+
+    // Resolution rate
+    const totalIssues = issuesSnapshot.size;
+    const resolutionRate = totalIssues > 0
+      ? Math.round((statusBreakdown.CLOSED / totalIssues) * 100)
+      : 0;
+
+    // Format issues trend for frontend
+    const issuesTrend = Object.entries(issuesLast7Days).map(([date, count]) => ({
+      date,
+      count,
+      label: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+    }));
+
+    const issuesTrend30Days = Object.entries(issuesLast30Days).map(([date, count]) => ({
+      date,
+      count,
+    }));
+
+    // Top 5 municipalities by issue count
+    const topMunicipalities = Object.entries(issuesByMunicipality)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 5)
+      .map(([id, data]) => ({
+        id,
+        name: data.name || id,
+        issueCount: data.count,
+      }));
+
+    // Check ML service health
+    let mlServiceStatus = "unknown";
+    try {
+      const mlResponse = await fetch(`${process.env.ML_SERVICE_URL || "http://localhost:8000"}/health`, {
+        signal: AbortSignal.timeout(2000),
+      });
+      if (mlResponse.ok) {
+        mlServiceStatus = "healthy";
+      } else {
+        mlServiceStatus = "unhealthy";
+      }
+    } catch {
+      mlServiceStatus = "offline";
+    }
 
     res.json({
       success: true,
       data: {
+        // Basic stats
         totalUsers: usersCount.data().count,
         totalMunicipalities: municipalitiesCount.data().count,
         totalIssues: issuesCount.data().count,
         pendingRegistrations: pendingRegistrations.data().count,
         issuesByStatus: statusBreakdown,
+
+        // Enhanced analytics
+        issuesByType,
+        topMunicipalities,
+        issuesTrend,
+        issuesTrend30Days,
+
+        // Performance metrics
+        resolutionRate,
+        avgResolutionTimeHours,
+
+        // ML Service status
+        mlServiceStatus,
       },
       error: null,
       timestamp: new Date().toISOString(),

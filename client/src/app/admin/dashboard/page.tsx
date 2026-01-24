@@ -55,8 +55,34 @@ import {
   Image,
   ArrowRight,
   List,
+  TrendingUp,
+  TrendingDown,
+  Activity,
+  Zap,
+  BarChart3,
+  PieChart as PieChartIcon,
+  Timer,
+  Server,
+  Brain,
+  Target,
+  Award,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
 import {
   AdminStats,
   Municipality,
@@ -211,6 +237,57 @@ function AdminDashboardContent() {
     open: false,
     issue: null,
   });
+
+  // ML Models state
+  const [mlModels, setMlModels] = useState<{
+    models: {
+      classifier: { name: string; status: string; classes: string[]; num_classes: number };
+      severity: { name: string; status: string; metrics: { mae: number; mse: number; training_samples: number; validation_samples: number } | null };
+      risk: { name: string; status: string };
+      clustering: { name: string; status: string; algorithm: string; default_params: { eps_meters: number; min_samples: number } };
+    };
+    capabilities: string[];
+  } | null>(null);
+  const [mlLoading, setMlLoading] = useState(false);
+  const [severityDemo, setSeverityDemo] = useState<{ issueType: string; result: { score: number; level: string } | null }>({ issueType: "POTHOLE", result: null });
+  const [severityLoading, setSeverityLoading] = useState(false);
+
+  const fetchMLModels = async () => {
+    setMlLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ml/models`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setMlModels(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch ML models:", error);
+    } finally {
+      setMlLoading(false);
+    }
+  };
+
+  const runSeverityDemo = async (issueType: string) => {
+    setSeverityLoading(true);
+    setSeverityDemo({ issueType, result: null });
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/ml/predict-severity`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ issueType }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setSeverityDemo({ issueType, result: { score: data.data.score, level: data.data.level } });
+        }
+      }
+    } catch (error) {
+      console.error("Severity demo failed:", error);
+    } finally {
+      setSeverityLoading(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -1052,7 +1129,7 @@ function AdminDashboardContent() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-4 w-full grid grid-cols-5 sm:flex sm:flex-wrap h-auto gap-1">
+          <TabsList className="mb-4 w-full grid grid-cols-6 sm:flex sm:flex-wrap h-auto gap-1">
             <TabsTrigger value="overview" className="text-xs md:text-sm px-2 sm:px-3">
               <span className="hidden sm:inline">Overview</span>
               <span className="sm:hidden">Home</span>
@@ -1083,8 +1160,8 @@ function AdminDashboardContent() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger 
-              value="issues" 
+            <TabsTrigger
+              value="issues"
               className="text-xs md:text-sm px-2 sm:px-3"
               onClick={() => {
                 if (allIssues.length === 0) {
@@ -1099,6 +1176,19 @@ function AdminDashboardContent() {
                   {allIssuesTotal}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="ml"
+              className="text-xs md:text-sm px-2 sm:px-3"
+              onClick={() => {
+                if (!mlModels) {
+                  fetchMLModels();
+                }
+              }}
+            >
+              <span className="hidden sm:inline">ML Models</span>
+              <span className="sm:hidden">ML</span>
+              <Brain className="h-3 w-3 ml-1 hidden md:inline-block" />
             </TabsTrigger>
           </TabsList>
 
@@ -1260,7 +1350,7 @@ function AdminDashboardContent() {
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Define the rectangular boundary for this municipality's
+                        Define the rectangular boundary for this municipality&apos;s
                         jurisdiction
                       </p>
                     </div>
@@ -2020,87 +2110,623 @@ function AdminDashboardContent() {
           </TabsContent>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-4">
+          <TabsContent value="overview" className="space-y-6">
+            {/* Hero Stats - Completion Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Completion Donut */}
+              <Card className="border-emerald-200 dark:border-emerald-800">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                    <Target className="h-5 w-5 text-emerald-600" />
+                    Issue Resolution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-6">
+                    <div className="relative w-32 h-32">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Resolved', value: stats?.issuesByStatus?.CLOSED || 0 },
+                              { name: 'Open', value: stats?.issuesByStatus?.OPEN || 0 },
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={35}
+                            outerRadius={50}
+                            paddingAngle={2}
+                            dataKey="value"
+                          >
+                            <Cell fill="#10b981" />
+                            <Cell fill="#e5e7eb" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-2xl font-bold text-emerald-600">
+                          {stats?.resolutionRate ?? 0}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Resolved</span>
+                        </div>
+                        <span className="font-semibold text-emerald-600">{stats?.issuesByStatus?.CLOSED || 0}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="h-3 w-3 rounded-full bg-gray-300" />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Open</span>
+                        </div>
+                        <span className="font-semibold text-gray-600">{stats?.issuesByStatus?.OPEN || 0}</span>
+                      </div>
+                      <div className="pt-2 border-t">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">Total Issues</span>
+                          <span className="text-lg font-bold text-emerald-700">{stats?.totalIssues || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Key Metrics */}
+              <Card className="border-emerald-200 dark:border-emerald-800">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-emerald-600" />
+                    Platform Metrics
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                      <Users className="h-6 w-6 mx-auto text-emerald-600 mb-1" />
+                      <p className="text-2xl font-bold text-emerald-700">{stats?.totalUsers || 0}</p>
+                      <p className="text-xs text-emerald-600">Total Users</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                      <Building2 className="h-6 w-6 mx-auto text-emerald-600 mb-1" />
+                      <p className="text-2xl font-bold text-emerald-700">{stats?.totalMunicipalities || 0}</p>
+                      <p className="text-xs text-emerald-600">Municipalities</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                      <Timer className="h-6 w-6 mx-auto text-emerald-600 mb-1" />
+                      <p className="text-2xl font-bold text-emerald-700">{stats?.avgResolutionTimeHours || 0}h</p>
+                      <p className="text-xs text-emerald-600">Avg Resolution</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/30">
+                      <Brain className="h-6 w-6 mx-auto text-emerald-600 mb-1" />
+                      <p className={`text-lg font-bold capitalize ${
+                        stats?.mlServiceStatus === 'healthy' ? 'text-emerald-700' : 'text-gray-500'
+                      }`}>
+                        {stats?.mlServiceStatus === 'healthy' ? 'Online' : stats?.mlServiceStatus || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-emerald-600">ML Service</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Issues Trend Chart */}
+            <Card className="border-emerald-200 dark:border-emerald-800">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-emerald-600" />
+                    Issues Trend (Last 7 Days)
+                  </CardTitle>
+                  <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                    {stats?.issuesTrend?.reduce((sum, d) => sum + d.count, 0) || 0} new issues
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={stats?.issuesTrend || []}
+                      margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorIssues" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="label"
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        axisLine={{ stroke: '#e5e7eb' }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: '#6b7280' }}
+                        axisLine={{ stroke: '#e5e7eb' }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#fff',
+                          border: '1px solid #d1fae5',
+                          borderRadius: '8px',
+                        }}
+                        labelStyle={{ color: '#065f46', fontWeight: 600 }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        fillOpacity={1}
+                        fill="url(#colorIssues)"
+                        name="Issues"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Issue Types & Municipalities Row */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Registrations */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Pending Actions</CardTitle>
+              {/* Issues by Type - Bar Chart */}
+              <Card className="border-emerald-200 dark:border-emerald-800">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5 text-emerald-600" />
+                    Issues by Category
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {stats?.issuesByType && Object.keys(stats.issuesByType).length > 0 ? (
+                    <div className="h-64">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={Object.entries(stats.issuesByType)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 6)
+                            .map(([type, count]) => ({
+                              type: type.replace(/_/g, ' ').slice(0, 12),
+                              count,
+                            }))}
+                          layout="vertical"
+                          margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} />
+                          <YAxis
+                            dataKey="type"
+                            type="category"
+                            tick={{ fontSize: 11, fill: '#6b7280' }}
+                            width={80}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#fff',
+                              border: '1px solid #d1fae5',
+                              borderRadius: '8px',
+                            }}
+                          />
+                          <Bar dataKey="count" fill="#10b981" radius={[0, 4, 4, 0]} name="Issues" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-gray-400">
+                      No issue data available
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Top Municipalities */}
+              <Card className="border-emerald-200 dark:border-emerald-800">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                      <Award className="h-5 w-5 text-emerald-600" />
+                      Top Municipalities
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActiveTab("municipalities")}
+                      className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                    >
+                      View All <ArrowRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {stats?.topMunicipalities && stats.topMunicipalities.length > 0 ? (
+                      stats.topMunicipalities.map((muni, index) => {
+                        const maxCount = stats.topMunicipalities?.[0]?.issueCount || 1;
+                        const percent = (muni.issueCount / maxCount) * 100;
+                        return (
+                          <div key={muni.id} className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <span className={`h-7 w-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                                  index === 0 ? 'bg-emerald-500 text-white' :
+                                  index === 1 ? 'bg-emerald-400 text-white' :
+                                  index === 2 ? 'bg-emerald-300 text-emerald-900' :
+                                  'bg-emerald-100 text-emerald-700'
+                                }`}>
+                                  {index + 1}
+                                </span>
+                                <span className="font-medium text-gray-800 dark:text-gray-200 truncate max-w-[180px]">
+                                  {muni.name}
+                                </span>
+                              </div>
+                              <span className="font-bold text-emerald-700">{muni.issueCount}</span>
+                            </div>
+                            <div className="h-2 bg-emerald-100 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                style={{ width: `${percent}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="h-48 flex items-center justify-center text-gray-400">
+                        No municipality data available
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Bottom Row - Pending & Quick Actions */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Status Breakdown */}
+              <Card className="border-emerald-200 dark:border-emerald-800">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                    <PieChartIcon className="h-5 w-5 text-emerald-600" />
+                    Status Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-gray-600">Completed</span>
+                          <span className="text-sm font-semibold text-emerald-600">{stats?.issuesByStatus?.CLOSED || 0}</span>
+                        </div>
+                        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: `${stats?.resolutionRate || 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm text-gray-600">Pending</span>
+                          <span className="text-sm font-semibold text-gray-500">{stats?.issuesByStatus?.OPEN || 0}</span>
+                        </div>
+                        <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-gray-400 rounded-full transition-all duration-500"
+                            style={{ width: `${100 - (stats?.resolutionRate || 0)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Resolution Rate</span>
+                        <span className="text-2xl font-bold text-emerald-600">{stats?.resolutionRate || 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pending Registrations */}
+              <Card className="lg:col-span-2 border-emerald-200 dark:border-emerald-800">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                      <Clock className="h-5 w-5 text-emerald-600" />
+                      Pending Registrations
+                    </CardTitle>
+                    {registrations.length > 0 && (
+                      <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+                        {registrations.length} pending
+                      </Badge>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {registrations.length > 0 ? (
                     <div className="space-y-3">
-                      {registrations.slice(0, 3).map((reg) => (
+                      {registrations.slice(0, 4).map((reg) => (
                         <div
                           key={reg.id}
-                          className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg"
+                          className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg border border-emerald-100"
                         >
-                          <div>
-                            <p className="font-medium">
-                              {reg.municipalityName}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-emerald-900 dark:text-emerald-100 truncate">{reg.municipalityName}</p>
+                            <p className="text-sm text-emerald-600 dark:text-emerald-400 truncate">
                               {reg.district}, {reg.state}
                             </p>
                           </div>
                           <Button
                             size="sm"
-                            variant="outline"
+                            className="ml-3 bg-emerald-600 hover:bg-emerald-700 text-white"
                             onClick={() => setActiveTab("registrations")}
                           >
                             Review
                           </Button>
                         </div>
                       ))}
+                      {registrations.length > 4 && (
+                        <Button
+                          variant="outline"
+                          className="w-full border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                          onClick={() => setActiveTab("registrations")}
+                        >
+                          View {registrations.length - 4} more
+                        </Button>
+                      )}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground text-center py-6">
-                      No pending actions
-                    </p>
+                    <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                      <CheckCircle className="h-12 w-12 mb-3 text-emerald-500" />
+                      <p className="text-lg font-medium text-emerald-700">All caught up!</p>
+                      <p className="text-sm text-gray-500">No pending registrations</p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
 
-              {/* Quick Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Platform Health</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">
-                        Resolution Rate
-                      </span>
-                      <span className="font-semibold">
-                        {stats?.totalIssues
-                          ? Math.round(
-                              ((stats.issuesByStatus?.CLOSED || 0) /
-                                stats.totalIssues) *
-                                100
-                            )
-                          : 0}
-                        %
-                      </span>
+          {/* ML Models Tab */}
+          <TabsContent value="ml" className="space-y-6">
+            {mlLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : mlModels ? (
+              <>
+                {/* ML Service Status */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Classifier */}
+                  <Card className="border-emerald-200 dark:border-emerald-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Image Classifier</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          mlModels.models.classifier.status === 'loaded'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {mlModels.models.classifier.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">{mlModels.models.classifier.name}</p>
+                      <p className="text-lg font-bold text-emerald-600 mt-1">{mlModels.models.classifier.num_classes} classes</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Severity */}
+                  <Card className="border-emerald-200 dark:border-emerald-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Severity Scorer</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          mlModels.models.severity.status === 'available'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {mlModels.models.severity.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">{mlModels.models.severity.name}</p>
+                      {mlModels.models.severity.metrics && (
+                        <p className="text-lg font-bold text-emerald-600 mt-1">MAE: {mlModels.models.severity.metrics.mae}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Risk */}
+                  <Card className="border-emerald-200 dark:border-emerald-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Risk Predictor</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          mlModels.models.risk.status === 'available'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {mlModels.models.risk.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">{mlModels.models.risk.name}</p>
+                      <p className="text-sm text-gray-600 mt-1">Weather + Location</p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Clustering */}
+                  <Card className="border-emerald-200 dark:border-emerald-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Clustering</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                          {mlModels.models.clustering.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">{mlModels.models.clustering.algorithm}</p>
+                      <p className="text-sm text-gray-600 mt-1">{mlModels.models.clustering.default_params.eps_meters}m radius</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Demo Section */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Severity Demo */}
+                  <Card className="border-emerald-200 dark:border-emerald-800">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                        <Target className="h-5 w-5 text-emerald-600" />
+                        Severity Prediction Demo
+                      </CardTitle>
+                      <CardDescription>Test the severity scoring model</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap gap-2">
+                          {["POTHOLE", "GARBAGE", "FALLEN_TREE", "DAMAGED_ELECTRICAL", "VANDALISM"].map((type) => (
+                            <Button
+                              key={type}
+                              variant={severityDemo.issueType === type ? "default" : "outline"}
+                              size="sm"
+                              className={severityDemo.issueType === type ? "bg-emerald-600 hover:bg-emerald-700" : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"}
+                              onClick={() => runSeverityDemo(type)}
+                              disabled={severityLoading}
+                            >
+                              {type.replace(/_/g, " ")}
+                            </Button>
+                          ))}
+                        </div>
+                        {severityLoading && (
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                            Predicting...
+                          </div>
+                        )}
+                        {severityDemo.result && (
+                          <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm text-gray-600">Issue Type:</span>
+                              <span className="font-medium">{severityDemo.issueType}</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-sm text-gray-600">Severity Score:</span>
+                              <span className="text-2xl font-bold text-emerald-600">{severityDemo.result.score.toFixed(1)}/10</span>
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-sm text-gray-600">Level:</span>
+                              <span className={`px-2 py-0.5 rounded text-sm font-medium ${
+                                severityDemo.result.level === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                                severityDemo.result.level === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                                severityDemo.result.level === 'MEDIUM' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-green-100 text-green-700'
+                              }`}>
+                                {severityDemo.result.level}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Capabilities */}
+                  <Card className="border-emerald-200 dark:border-emerald-800">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-emerald-600" />
+                        ML Capabilities
+                      </CardTitle>
+                      <CardDescription>What our ML models can do</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {mlModels.capabilities.map((cap, i) => (
+                          <div key={i} className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                            <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{cap}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Model Metrics */}
+                {mlModels.models.severity.metrics && (
+                  <Card className="border-emerald-200 dark:border-emerald-800">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-emerald-600" />
+                        Model Training Metrics
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                          <p className="text-2xl font-bold text-emerald-600">{mlModels.models.severity.metrics.mae}</p>
+                          <p className="text-xs text-gray-500">Mean Absolute Error</p>
+                        </div>
+                        <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                          <p className="text-2xl font-bold text-emerald-600">{mlModels.models.severity.metrics.mse}</p>
+                          <p className="text-xs text-gray-500">Mean Squared Error</p>
+                        </div>
+                        <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                          <p className="text-2xl font-bold text-emerald-600">{mlModels.models.severity.metrics.training_samples}</p>
+                          <p className="text-xs text-gray-500">Training Samples</p>
+                        </div>
+                        <div className="text-center p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                          <p className="text-2xl font-bold text-emerald-600">{mlModels.models.severity.metrics.validation_samples}</p>
+                          <p className="text-xs text-gray-500">Validation Samples</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Issue Types Classification */}
+                <Card className="border-emerald-200 dark:border-emerald-800">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-semibold text-emerald-900 dark:text-emerald-100 flex items-center gap-2">
+                      <PieChartIcon className="h-5 w-5 text-emerald-600" />
+                      Supported Issue Types
+                    </CardTitle>
+                    <CardDescription>The classifier can identify these issue types</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {mlModels.models.classifier.classes.map((cls) => (
+                        <Badge key={cls} variant="outline" className="border-emerald-200 text-emerald-700 bg-emerald-50">
+                          {cls}
+                        </Badge>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">
-                        Active Municipalities
-                      </span>
-                      <span className="font-semibold">
-                        {stats?.totalMunicipalities || 0}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Open Issues</span>
-                      <span className="font-semibold text-yellow-600">
-                        {stats?.issuesByStatus?.OPEN || 0}
-                      </span>
-                    </div>
-                  </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card className="border-emerald-200 dark:border-emerald-800">
+                <CardContent className="p-8 text-center">
+                  <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-4">ML service is not available</p>
+                  <Button
+                    variant="outline"
+                    className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                    onClick={fetchMLModels}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Retry
+                  </Button>
                 </CardContent>
               </Card>
-            </div>
+            )}
           </TabsContent>
         </Tabs>
 

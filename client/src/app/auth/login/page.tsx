@@ -108,9 +108,9 @@ export default function LoginPage() {
       <header className="border-b bg-background">
         <div className="container px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            {/* <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <MapPin className="h-5 w-5" />
-            </div>
+            </div> */}
             <span className="font-bold text-xl">CivicLemma</span>
           </Link>
           <Button variant="ghost" asChild>

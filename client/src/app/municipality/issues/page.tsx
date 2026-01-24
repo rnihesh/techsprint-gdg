@@ -39,8 +39,10 @@ import {
   Camera,
   X,
   ExternalLink,
+  AlertTriangle,
 } from "lucide-react";
 import { uploadImage } from "@/lib/cloudinary";
+import { PriorityBadge } from "@/components/agent/PriorityBadge";
 
 interface Issue {
   id: string;
@@ -62,6 +64,10 @@ interface Issue {
   };
   createdAt: string;
   updatedAt: string;
+  // Priority fields (from AI agent)
+  priority_score?: number;
+  priority_severity?: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  priority_reasoning?: string;
 }
 
 const statusConfig: Record<
@@ -109,6 +115,7 @@ function IssuesContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<string>("pending");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("date");
 
   // Resolve dialog state
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
@@ -156,27 +163,38 @@ function IssuesContent() {
     fetchIssues();
   }, [fetchIssues]);
 
-  // Filter issues based on tab and search
-  const filteredIssues = issues.filter((issue) => {
-    // Tab filter
-    if (activeTab === "pending" && issue.status !== "OPEN") return false;
-    if (activeTab === "resolved" && issue.status !== "CLOSED") return false;
+  // Filter and sort issues based on tab, search, and sort option
+  const filteredIssues = issues
+    .filter((issue) => {
+      // Tab filter
+      if (activeTab === "pending" && issue.status !== "OPEN") return false;
+      if (activeTab === "resolved" && issue.status !== "CLOSED") return false;
 
-    // Type filter
-    if (typeFilter !== "all" && issue.type !== typeFilter) return false;
+      // Type filter
+      if (typeFilter !== "all" && issue.type !== typeFilter) return false;
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return (
-        issue.description.toLowerCase().includes(query) ||
-        issue.type.toLowerCase().includes(query) ||
-        issue.location.address?.toLowerCase().includes(query)
-      );
-    }
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          issue.description.toLowerCase().includes(query) ||
+          issue.type.toLowerCase().includes(query) ||
+          issue.location.address?.toLowerCase().includes(query)
+        );
+      }
 
-    return true;
-  });
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "priority") {
+        // Sort by priority score (highest first), then by date
+        const scoreA = a.priority_score || 0;
+        const scoreB = b.priority_score || 0;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+      }
+      // Default: sort by date (newest first)
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 
   // Stats
   const stats = {
@@ -335,6 +353,16 @@ function IssuesContent() {
                     {label}
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Newest First</SelectItem>
+                <SelectItem value="priority">Priority</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -585,7 +613,7 @@ function IssueCard({
           {/* Content */}
           <div className="flex-1 p-4">
             <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="text-xs">
                   {issueTypeLabels[issue.type] || issue.type}
                 </Badge>
@@ -594,6 +622,15 @@ function IssueCard({
                 >
                   {status.label}
                 </Badge>
+                {/* Priority Badge */}
+                {issue.priority_score && issue.priority_severity && (
+                  <PriorityBadge
+                    score={issue.priority_score}
+                    severity={issue.priority_severity}
+                    reasoning={issue.priority_reasoning}
+                    size="sm"
+                  />
+                )}
               </div>
               <span className="text-xs text-gray-500">
                 {getDaysAgo(issue.createdAt)}

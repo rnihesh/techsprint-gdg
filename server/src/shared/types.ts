@@ -286,3 +286,80 @@ export interface Leaderboard {
   lastUpdated: Date;
   totalMunicipalities: number;
 }
+
+// ============================================
+// ML CLUSTERING TYPES
+// ============================================
+
+export interface IssueCluster {
+  id: string;
+  centroid: GeoLocation;
+  issueCount: number;
+  aggregateSeverity: number;
+  severityLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  dominantType: IssueType | null;
+  typeCounts: Record<string, number>;
+  radiusMeters: number;
+  issueIds: string[];
+}
+
+export interface ClusteringResult {
+  clusters: IssueCluster[];
+  unclustered: Issue[];
+  statistics: {
+    totalIssues: number;
+    clusteredCount: number;
+    unclusteredCount: number;
+    clusterCount: number;
+    avgClusterSize: number;
+  };
+}
+
+// ============================================
+// ML SEVERITY TYPES
+// ============================================
+
+export interface SeverityPrediction {
+  score: number; // 1-10
+  level: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  confidence: number;
+  factors: string[];
+  mlScore?: number;
+  ruleScore?: number;
+}
+
+// ============================================
+// ML RISK TYPES
+// ============================================
+
+export interface RiskPrediction {
+  riskScore: number; // 0-1
+  riskLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  confidence: number;
+  factors: string[];
+  location: GeoLocation;
+  weather: {
+    rainfall_mm: number;
+    temperature_c: number;
+    humidity_pct: number;
+    is_monsoon: boolean;
+  };
+}
+
+export interface RiskGridPrediction {
+  latitude: number;
+  longitude: number;
+  riskScore: number;
+  riskLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+}
+
+export interface RiskGridResult {
+  predictions: RiskGridPrediction[];
+  bounds: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  gridSize: number;
+}

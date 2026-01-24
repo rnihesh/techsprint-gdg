@@ -6,26 +6,7 @@ import { useRouter } from "next/navigation";
 import { Header, Footer } from "@/components/layout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { issuesApi } from "@/lib/api";
-import {
-  MapPin,
-  Camera,
-  Send,
-  Shield,
-  Trophy,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  Building,
-} from "lucide-react";
 
 interface Stats {
   totalIssues: number;
@@ -101,36 +82,31 @@ export default function HomePage() {
       <Header />
 
       <main className="flex-1">
-        {/* Hero Section */}
-        <section className="relative bg-gradient-to-br from-primary/10 via-background to-background py-16 md:py-24">
+        {/* Hero Section - Clean & Minimal */}
+        <section className="py-20 md:py-32">
           <div className="container px-4">
-            <div className="max-w-3xl mx-auto text-center space-y-6">
-              <Badge variant="secondary" className="px-4 py-1">
-                🇮🇳 For Indian Residents
-              </Badge>
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+            <div className="max-w-3xl mx-auto text-center space-y-8">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-gray-900 dark:text-white">
                 Report Civic Issues.
                 <br />
-                <span className="text-primary">
-                  Hold Municipalities Accountable.
+                <span className="text-emerald-600">
+                  Make Your City Better.
                 </span>
               </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Report potholes, garbage, drainage problems and more. Stay
-                anonymous. Track resolution. Make your city better.
+              <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                Report potholes, garbage, and infrastructure problems.
+                Track resolution progress. Hold municipalities accountable.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                 {(!user || userProfile?.role === "USER") && (
-                  <Button size="lg" asChild>
+                  <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8" asChild>
                     <Link href="/report">
-                      <Send className="mr-2 h-5 w-5" />
                       Report an Issue
                     </Link>
                   </Button>
                 )}
-                <Button size="lg" variant="outline" asChild>
+                <Button size="lg" variant="outline" className="border-gray-300 hover:bg-gray-50 px-8" asChild>
                   <Link href="/map">
-                    <MapPin className="mr-2 h-5 w-5" />
                     View Issue Map
                   </Link>
                 </Button>
@@ -139,113 +115,85 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Stats Section */}
-        <section className="py-12 border-b bg-muted/30">
+        {/* Stats Section - Clean cards */}
+        <section className="py-16 bg-gray-50 dark:bg-gray-900/50">
           <div className="container px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="flex justify-center mb-2">
-                  <AlertTriangle className="h-8 w-8 text-primary" />
-                </div>
-                <div className="text-2xl md:text-3xl font-bold">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
+                <div className="text-3xl md:text-4xl font-bold text-emerald-600">
                   {stats?.totalIssues ?? 0}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Issues Reported
                 </div>
               </div>
-              <div className="text-center">
-                <div className="flex justify-center mb-2">
-                  <CheckCircle className="h-8 w-8 text-primary" />
-                </div>
-                <div className="text-2xl md:text-3xl font-bold">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
+                <div className="text-3xl md:text-4xl font-bold text-emerald-600">
                   {stats?.resolvedIssues ?? 0}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Issues Resolved
                 </div>
               </div>
-              <div className="text-center">
-                <div className="flex justify-center mb-2">
-                  <Building className="h-8 w-8 text-primary" />
-                </div>
-                <div className="text-2xl md:text-3xl font-bold">
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
+                <div className="text-3xl md:text-4xl font-bold text-emerald-600">
                   {stats?.totalMunicipalities ?? 0}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Municipalities
                 </div>
               </div>
-              <div className="text-center">
-                <div className="flex justify-center mb-2">
-                  <Clock className="h-8 w-8 text-primary" />
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 text-center shadow-sm">
+                <div className="text-3xl md:text-4xl font-bold text-emerald-600">
+                  {stats?.avgResponseTime ?? 0}h
                 </div>
-                <div className="text-2xl md:text-3xl font-bold">
-                  {stats?.avgResponseTime ?? 0} hrs
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Avg Response Time
+                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Avg Response
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Features Section */}
-        <section className="py-16">
+        {/* How It Works - Clean steps */}
+        <section className="py-20">
           <div className="container px-4">
-            <div className="text-center mb-12">
-              <h2 className="text-3xl font-bold mb-4">How It Works</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                A simple, transparent process to report issues and track their
-                resolution.
+            <div className="text-center mb-16">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">How It Works</h2>
+              <p className="text-gray-600 dark:text-gray-400 max-w-xl mx-auto">
+                Three simple steps to report issues and track their resolution.
               </p>
             </div>
-            <div className="grid md:grid-cols-3 gap-8">
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Camera className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>1. Report</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Take a photo, add location, and describe the issue. Stay
-                    completely anonymous if you prefer.
-                  </CardDescription>
-                </CardContent>
-              </Card>
+            <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-5">
+                  <span className="text-xl font-bold text-emerald-600">1</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Report</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                  Take a photo and describe the issue. Your report can be anonymous.
+                </p>
+              </div>
 
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Shield className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>2. Verify</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Our AI verifies the authenticity of reports and forwards
-                    them to the concerned municipality.
-                  </CardDescription>
-                </CardContent>
-              </Card>
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-5">
+                  <span className="text-xl font-bold text-emerald-600">2</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Verify</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                  Reports are verified and routed to the appropriate municipality.
+                </p>
+              </div>
 
-              <Card className="text-center">
-                <CardHeader>
-                  <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                    <Trophy className="h-6 w-6 text-primary" />
-                  </div>
-                  <CardTitle>3. Track</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Monitor progress, see municipality responses, and view the
-                    public accountability leaderboard.
-                  </CardDescription>
-                </CardContent>
-              </Card>
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mx-auto mb-5">
+                  <span className="text-xl font-bold text-emerald-600">3</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Track</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                  Monitor progress and see when your issue gets resolved.
+                </p>
+              </div>
             </div>
           </div>
         </section>

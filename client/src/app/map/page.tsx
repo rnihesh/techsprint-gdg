@@ -21,7 +21,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { issuesApi, municipalitiesApi } from "@/lib/api";
+import { issuesApi, municipalitiesApi, mlApi } from "@/lib/api";
+import { agentApi } from "@/lib/agentApi";
 import {
   MapPin,
   Filter,
@@ -31,7 +32,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  Layers,
+  Thermometer,
 } from "lucide-react";
+import { PriorityBadge } from "@/components/agent/PriorityBadge";
 
 // Dynamically import Google Maps to avoid SSR issues
 const GoogleMapComponent = dynamic(
@@ -50,6 +54,12 @@ const GoogleMapComponent = dynamic(
   }
 );
 
+interface IssuePriority {
+  score: number;
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  reasoning?: string;
+}
+
 interface Issue {
   id: string;
   description: string;
@@ -63,6 +73,7 @@ interface Issue {
   createdAt: string;
   municipalityId: string;
   imageUrls?: string[];
+  priority?: IssuePriority;
 }
 
 interface MunicipalityBounds {
@@ -74,6 +85,25 @@ interface MunicipalityBounds {
     east: number;
     west: number;
   };
+}
+
+interface ClusterData {
+  id: string;
+  centroid: { latitude: number; longitude: number };
+  issueCount: number;
+  aggregateSeverity: number;
+  severityLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
+  dominantType: string | null;
+  typeCounts: Record<string, number>;
+  radiusMeters: number;
+  issueIds: string[];
+}
+
+interface RiskGridPoint {
+  latitude: number;
+  longitude: number;
+  riskScore: number;
+  riskLevel: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 }
 
 const issueTypes = [
@@ -146,6 +176,7 @@ const getTypeBadge = (type: string) => {
 export default function MapPage() {
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [isLoading, setIsLoading] = useState(true);
+  const [isPriorityLoading, setIsPriorityLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
@@ -157,6 +188,22 @@ export default function MapPage() {
     []
   );
   const [showBorders, setShowBorders] = useState(true);
+  const [showClusters, setShowClusters] = useState(false);
+  const [showRiskHeatmap, setShowRiskHeatmap] = useState(false);
+  const [clusters, setClusters] = useState<ClusterData[]>([]);
+  const [riskData, setRiskData] = useState<{
+    predictions: RiskGridPoint[];
+    bounds: { north: number; south: number; east: number; west: number };
+    gridSize: number;
+  } | null>(null);
+  const [isClusterLoading, setIsClusterLoading] = useState(false);
+  const [isRiskLoading, setIsRiskLoading] = useState(false);
+  const [mapBounds, setMapBounds] = useState<{
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  } | null>(null);
 
   // Fetch municipalities with bounds
   useEffect(() => {
@@ -206,7 +253,94 @@ export default function MapPage() {
         });
 
         if (result.success && result.data?.items) {
-          setIssues(result.data.items as Issue[]);
+          // Map raw items to Issue type, including stored priority from Firebase
+          const fetchedIssues = (result.data.items as any[]).map((item) => {
+            const issue: Issue = {
+              id: item.id,
+              description: item.description,
+              type: item.type,
+              status: item.status,
+              location: item.location,
+              createdAt: item.createdAt,
+              municipalityId: item.municipalityId,
+              imageUrls: item.imageUrls,
+            };
+
+            // Map stored priority fields from Firebase (flat structure) to nested structure
+            if (item.priority_score !== undefined && item.priority_severity) {
+              issue.priority = {
+                score: item.priority_score,
+                severity: item.priority_severity as IssuePriority["severity"],
+                reasoning: item.priority_reasoning || undefined,
+              };
+            }
+
+            return issue;
+          });
+
+          setIssues(fetchedIssues);
+
+          // Only score issues that don't have stored priority (fallback for old issues)
+          // This runs once per issue, and the score is saved to Firebase
+          const openIssuesWithoutPriority = fetchedIssues.filter(
+            (issue) => issue.status === "OPEN" && !issue.priority
+          );
+
+          if (openIssuesWithoutPriority.length > 0) {
+            setIsPriorityLoading(true);
+            // Score issues in background (don't block UI) - limit to 5 to avoid overload
+            (async () => {
+              try {
+                const priorityPromises = openIssuesWithoutPriority.slice(0, 5).map(async (issue) => {
+                  try {
+                    // This API call now SAVES the priority to Firebase
+                    const score = await agentApi.priority.score({
+                      issue_id: issue.id,
+                      image_url: issue.imageUrls?.[0],
+                      description: issue.description,
+                      location: issue.location ? {
+                        lat: issue.location.latitude,
+                        lng: issue.location.longitude,
+                      } : undefined,
+                      issue_type: issue.type,
+                    });
+                    return { issueId: issue.id, priority: score };
+                  } catch (e) {
+                    console.error(`Failed to score issue ${issue.id}:`, e);
+                    return null;
+                  }
+                });
+
+                const priorityResults = (await Promise.all(priorityPromises)).filter(Boolean);
+
+                // Update issues with priority scores (for immediate display)
+                if (priorityResults.length > 0) {
+                  setIssues((prevIssues) => {
+                    return prevIssues.map((issue) => {
+                      const priorityResult = priorityResults.find(
+                        (r) => r?.issueId === issue.id
+                      );
+                      if (priorityResult) {
+                        return {
+                          ...issue,
+                          priority: {
+                            score: priorityResult.priority.score,
+                            severity: priorityResult.priority.severity,
+                            reasoning: priorityResult.priority.reasoning,
+                          },
+                        };
+                      }
+                      return issue;
+                    });
+                  });
+                }
+              } catch (e) {
+                console.error("Error fetching priority scores:", e);
+              } finally {
+                setIsPriorityLoading(false);
+              }
+            })();
+          }
         } else {
           setError(result.error || "Failed to fetch issues");
           setIssues([]);
@@ -222,6 +356,62 @@ export default function MapPage() {
 
     fetchIssues();
   }, [filters]);
+
+  // Fetch clusters when clustering is enabled
+  useEffect(() => {
+    if (!showClusters) {
+      setClusters([]);
+      return;
+    }
+
+    const fetchClusters = async () => {
+      setIsClusterLoading(true);
+      try {
+        const result = await mlApi.cluster({
+          bounds: mapBounds || undefined,
+          status: filters.status !== "all" ? filters.status : undefined,
+        });
+
+        if (result.success && result.data) {
+          setClusters(result.data.clusters);
+        }
+      } catch (err) {
+        console.error("Error fetching clusters:", err);
+      } finally {
+        setIsClusterLoading(false);
+      }
+    };
+
+    fetchClusters();
+  }, [showClusters, mapBounds, filters.status]);
+
+  // Fetch risk heatmap data when enabled
+  useEffect(() => {
+    if (!showRiskHeatmap || !mapBounds) {
+      setRiskData(null);
+      return;
+    }
+
+    const fetchRiskData = async () => {
+      setIsRiskLoading(true);
+      try {
+        const result = await mlApi.predictRiskGrid({
+          bounds: mapBounds,
+          grid_size: 8,
+        });
+
+        if (result.success && result.data) {
+          setRiskData(result.data);
+        }
+      } catch (err) {
+        console.error("Error fetching risk data:", err);
+      } finally {
+        setIsRiskLoading(false);
+      }
+    };
+
+    fetchRiskData();
+  }, [showRiskHeatmap, mapBounds]);
 
   const filteredIssues = issues.filter((issue) => {
     const matchesSearch =
@@ -335,31 +525,113 @@ export default function MapPage() {
                   <GoogleMapComponent
                     issues={filteredIssues}
                     municipalities={municipalities}
+                    clusters={clusters}
+                    riskData={riskData || undefined}
                     showMunicipalityBorders={showBorders}
+                    showClusters={showClusters}
+                    showRiskHeatmap={showRiskHeatmap}
+                    onBoundsChange={setMapBounds}
                   />
                   {/* Issue count overlay */}
                   <div className="absolute top-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10">
                     <p className="text-sm font-medium">
-                      {filteredIssues.length} issues found
+                      {showClusters
+                        ? `${clusters.length} clusters`
+                        : `${filteredIssues.length} issues`}
                     </p>
                     {municipalities.length > 0 && (
                       <p className="text-xs text-muted-foreground">
                         {municipalities.length} municipalities
                       </p>
                     )}
+                    {isPriorityLoading && (
+                      <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
+                        <span className="animate-spin inline-block w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full"></span>
+                        Calculating priorities...
+                      </p>
+                    )}
+                    {isClusterLoading && (
+                      <p className="text-xs text-purple-600 flex items-center gap-1 mt-1">
+                        <span className="animate-spin inline-block w-3 h-3 border-2 border-purple-600 border-t-transparent rounded-full"></span>
+                        Loading clusters...
+                      </p>
+                    )}
+                    {isRiskLoading && (
+                      <p className="text-xs text-orange-600 flex items-center gap-1 mt-1">
+                        <span className="animate-spin inline-block w-3 h-3 border-2 border-orange-600 border-t-transparent rounded-full"></span>
+                        Loading risk data...
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ML Features Toggle Panel */}
+                  <div className="absolute top-4 right-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10">
+                    <p className="text-xs font-medium mb-2">ML Features</p>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setShowClusters(!showClusters)}
+                        className={`flex items-center gap-2 text-xs px-2 py-1 rounded w-full ${
+                          showClusters
+                            ? "bg-purple-100 text-purple-800"
+                            : "hover:bg-gray-100"
+                        }`}
+                      >
+                        <Layers className="h-3 w-3" />
+                        {showClusters ? "Hide" : "Show"} Clusters
+                      </button>
+                      <button
+                        onClick={() => setShowRiskHeatmap(!showRiskHeatmap)}
+                        className={`flex items-center gap-2 text-xs px-2 py-1 rounded w-full ${
+                          showRiskHeatmap
+                            ? "bg-orange-100 text-orange-800"
+                            : "hover:bg-gray-100"
+                        }`}
+                      >
+                        <Thermometer className="h-3 w-3" />
+                        {showRiskHeatmap ? "Hide" : "Show"} Risk Map
+                      </button>
+                    </div>
                   </div>
                   {/* Legend */}
-                  <div className="absolute bottom-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10">
-                    <p className="text-xs font-medium mb-2">Legend</p>
+                  <div className="absolute bottom-4 left-4 bg-background/95 backdrop-blur rounded-lg p-3 shadow-lg z-10 max-h-[300px] overflow-y-auto">
+                    <p className="text-xs font-medium mb-2">
+                      {showClusters ? "Cluster" : "Priority"} Legend
+                    </p>
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-xs">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                        <span>Open</span>
+                        <div className="w-4 h-4 rounded-full bg-red-600 border-2 border-white shadow"></div>
+                        <span>Critical</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <span>Closed</span>
+                        <div className="w-3.5 h-3.5 rounded-full bg-orange-600 border-2 border-white shadow"></div>
+                        <span>High</span>
                       </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="w-3 h-3 rounded-full bg-yellow-600 border-2 border-white shadow"></div>
+                        <span>Medium</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-600 border-2 border-white shadow"></div>
+                        <span>Low</span>
+                      </div>
+                      {!showClusters && (
+                        <div className="border-t my-2 pt-2">
+                          <div className="flex items-center gap-2 text-xs">
+                            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span>Closed</span>
+                          </div>
+                        </div>
+                      )}
+                      {showRiskHeatmap && (
+                        <div className="border-t my-2 pt-2">
+                          <p className="text-xs font-medium mb-1">Risk Level</p>
+                          <div className="h-2 w-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded"></div>
+                          <div className="flex justify-between text-xs text-gray-500 mt-0.5">
+                            <span>Low</span>
+                            <span>High</span>
+                          </div>
+                        </div>
+                      )}
                       <div className="border-t my-2 pt-2">
                         <div className="flex items-center gap-2 text-xs">
                           <div className="w-3 h-3 border-2 border-indigo-500 bg-indigo-500/10"></div>
@@ -444,6 +716,17 @@ export default function MapPage() {
 
                             <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground mb-2">
                               {getTypeBadge(issue.type)}
+                              {issue.priority && (
+                                <>
+                                  <span className="hidden sm:inline">•</span>
+                                  <PriorityBadge
+                                    score={issue.priority.score}
+                                    severity={issue.priority.severity}
+                                    reasoning={issue.priority.reasoning}
+                                    size="sm"
+                                  />
+                                </>
+                              )}
                               <span className="hidden sm:inline">•</span>
                               <span className="text-xs">
                                 {new Date(issue.createdAt).toLocaleDateString()}

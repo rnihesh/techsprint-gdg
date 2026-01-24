@@ -7,3 +7,8 @@ google-generativeai
 python-dotenv
 numpy
 python-multipart
+scikit-learn>=1.0.0
+xgboost>=1.7.0
+joblib>=1.2.0
+pandas>=1.5.0
+efficientnet

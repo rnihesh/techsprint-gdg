@@ -63,3 +63,5 @@ venv/
 
 # ML Models are tracked (needed for deployment)
 # Do NOT ignore ml/models/
+.env*
+keys.txt

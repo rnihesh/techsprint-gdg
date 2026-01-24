@@ -7,6 +7,25 @@ export interface AdminStats {
     OPEN: number;
     CLOSED: number;
   };
+  // Enhanced analytics
+  issuesByType?: Record<string, number>;
+  topMunicipalities?: Array<{
+    id: string;
+    name: string;
+    issueCount: number;
+  }>;
+  issuesTrend?: Array<{
+    date: string;
+    count: number;
+    label: string;
+  }>;
+  issuesTrend30Days?: Array<{
+    date: string;
+    count: number;
+  }>;
+  resolutionRate?: number;
+  avgResolutionTimeHours?: number;
+  mlServiceStatus?: "healthy" | "unhealthy" | "offline" | "unknown";
 }
 
 export interface Municipality {

@@ -93,12 +93,9 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center space-x-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <MapPin className="h-5 w-5" />
-          </div>
-          <span className="font-bold text-xl hidden sm:inline-block">
-            CivicLemma
+        <Link href="/" className="flex items-center">
+          <span className="font-bold text-xl text-emerald-700 dark:text-emerald-500">
+            Civic<span className="text-gray-900 dark:text-white">Lemma</span>
           </span>
         </Link>
 
@@ -148,12 +145,12 @@ export function Header() {
           <SheetContent side="left" className="w-[300px] p-0 border-r-0">
             <div className="flex flex-col h-full bg-gradient-to-b from-background to-muted/20">
               {/* Header */}
-              <div className="flex items-center gap-3 p-5 border-b bg-primary/5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
-                  <MapPin className="h-6 w-6" />
-                </div>
+              <div className="flex items-center gap-3 p-5 border-b">
                 <div>
-                  <SheetTitle className="text-xl font-bold tracking-tight">CivicLemma</SheetTitle>
+                  <SheetTitle className="text-xl font-bold tracking-tight">
+                    <span className="text-emerald-600">Civic</span>
+                    <span className="text-gray-900 dark:text-white">Lemma</span>
+                  </SheetTitle>
                   <p className="text-xs text-muted-foreground">Civic Issue Platform</p>
                 </div>
               </div>

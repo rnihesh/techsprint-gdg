@@ -11,6 +11,7 @@ import { municipalityRoutes } from "./routes/municipalities";
 import { uploadRoutes } from "./routes/upload";
 import { classifyRoutes } from "./routes/classify";
 import { adminRoutes } from "./routes/admin";
+import { mlRoutes } from "./routes/ml";
 import { errorHandler } from "./middleware/errorHandler";
 import { notFoundHandler } from "./middleware/notFoundHandler";
 
@@ -37,6 +38,7 @@ app.use("/api/municipalities", municipalityRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/classify", classifyRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/ml", mlRoutes);
 
 // Root route
 app.get("/", (req, res) => {

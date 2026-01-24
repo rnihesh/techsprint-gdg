@@ -1,28 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Footer() {
   const { userProfile } = useAuth();
-  
+
   // Determine which links to show based on user role
   const role = userProfile?.role;
-  
+
   return (
-    <footer className="border-t bg-muted/50">
-      <div className="container px-4 py-6 md:py-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center sm:text-left">
+    <footer className="border-t bg-gray-50 dark:bg-gray-900/50">
+      <div className="container px-4 py-8 md:py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 text-center sm:text-left">
           {/* Brand - Always visible */}
-          <div className="space-y-3 md:space-y-4 flex flex-col items-center sm:items-start">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <span className="font-bold text-lg md:text-xl">CivicLemma</span>
+          <div className="space-y-4 flex flex-col items-center sm:items-start">
+            <Link href="/" className="flex items-center">
+              <span className="font-bold text-xl">
+                <span className="text-emerald-600">Civic</span>
+                <span className="text-gray-900 dark:text-white">Lemma</span>
+              </span>
             </Link>
-            <p className="text-xs md:text-sm text-muted-foreground max-w-xs">
+            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-xs">
               Empowering citizens to report civic issues and hold municipalities
               accountable.
             </p>
@@ -177,10 +176,9 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t text-center text-xs md:text-sm text-muted-foreground">
+        <div className="mt-8 md:mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 text-center text-sm text-gray-500 dark:text-gray-400">
           <p>
-            &copy; {new Date().getFullYear()} CivicLemma. Built for GDG
-            TechSprint.
+            &copy; {new Date().getFullYear()} CivicLemma. Built for GDG TechSprint.
           </p>
         </div>
       </div>
